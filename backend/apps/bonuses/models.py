@@ -21,6 +21,10 @@ class BonusLedgerEntry(models.Model):
     reason = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        verbose_name = "Начисление бонусов"
+        verbose_name_plural = "Начисления бонусов"
+
 
 class BonusSpendRequest(models.Model):
     participant = models.ForeignKey(
@@ -31,3 +35,7 @@ class BonusSpendRequest(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=32, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Запрос на списание бонусов"
+        verbose_name_plural = "Запросы на списание бонусов"

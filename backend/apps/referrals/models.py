@@ -12,6 +12,10 @@ class ReferralLink(models.Model):
         related_name="referral_link",
     )
 
+    class Meta:
+        verbose_name = "Реферальная ссылка"
+        verbose_name_plural = "Реферальные ссылки"
+
     def __str__(self) -> str:
         return self.code
 
@@ -33,6 +37,10 @@ class ReferralLead(models.Model):
     )
     admin_comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Реферальная заявка"
+        verbose_name_plural = "Реферальные заявки"
 
     def __str__(self) -> str:
         return self.client_name

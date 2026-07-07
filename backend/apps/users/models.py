@@ -8,5 +8,9 @@ class Participant(models.Model):
     consent_accepted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        verbose_name = "Участник"
+        verbose_name_plural = "Участники"
+
     def __str__(self) -> str:
         return self.full_name

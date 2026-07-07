@@ -4,6 +4,10 @@ from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
 from apps.referrals.models import ReferralLead, ReferralLink
 from apps.users.models import Participant
 
+admin.site.site_header = "Админка программы лояльности"
+admin.site.site_title = "Админка программы лояльности"
+admin.site.index_title = "Управление заявками и бонусами"
+
 
 @admin.register(Participant)
 class ParticipantAdmin(admin.ModelAdmin):
