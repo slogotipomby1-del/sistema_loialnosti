@@ -1,12 +1,41 @@
 from pathlib import Path
 import os
+from urllib.parse import urlparse
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def parse_env_list(raw_value: str) -> list[str]:
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
+
+
+def parse_database_url(database_url: str, base_dir: Path | None = None) -> dict:
+    current_base_dir = base_dir or BASE_DIR
+    if not database_url:
+        return {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": current_base_dir / "db.sqlite3",
+        }
+
+    parsed = urlparse(database_url)
+    if parsed.scheme not in {"postgres", "postgresql"}:
+        raise ValueError(f"Unsupported database scheme: {parsed.scheme}")
+
+    return {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": parsed.path.lstrip("/"),
+        "USER": parsed.username or "",
+        "PASSWORD": parsed.password or "",
+        "HOST": parsed.hostname or "",
+        "PORT": parsed.port or 5432,
+    }
+
+
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+ALLOWED_HOSTS = parse_env_list(os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost"))
+CSRF_TRUSTED_ORIGINS = parse_env_list(os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", ""))
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -51,10 +80,7 @@ TEMPLATES = [
 ]
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": parse_database_url(os.getenv("DATABASE_URL", ""), base_dir=BASE_DIR)
 }
 
 LANGUAGE_CODE = "ru-ru"
@@ -63,4 +89,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
