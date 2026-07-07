@@ -1,0 +1,15 @@
+[Unit]
+Description=Referral MVP Telegram Bot
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/sistema_loialnosti/backend
+EnvironmentFile=/opt/sistema_loialnosti/.env
+ExecStart=/opt/sistema_loialnosti/backend/.venv/bin/python -m apps.bot.run_polling
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

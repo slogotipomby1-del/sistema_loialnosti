@@ -58,7 +58,25 @@ python manage.py createsuperuser
 gunicorn config.wsgi:application --bind 127.0.0.1:8000
 ```
 
-## 7. Дальше подключается Nginx
+## 7. Запуск Telegram-бота
+
+Пример команды:
+
+```bash
+python -m apps.bot.run_polling
+```
+
+## 8. Готовые server-файлы в проекте
+
+В репозитории уже лежат шаблоны:
+
+- `deploy/systemd/referral_admin.service`
+- `deploy/systemd/referral_bot.service`
+- `deploy/nginx/referral_admin.conf`
+
+Их нужно адаптировать под ваш домен, пользователя сервера и путь установки.
+
+## 9. Дальше подключается Nginx
 
 Nginx должен:
 
@@ -66,7 +84,7 @@ Nginx должен:
 - проксировать админку на `127.0.0.1:8000`
 - принимать HTTPS
 
-## 8. Что делать следующим этапом
+## 10. Что делать следующим этапом
 
 После этого нужно отдельно:
 
