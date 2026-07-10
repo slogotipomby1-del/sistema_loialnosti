@@ -1,11 +1,9 @@
 import secrets
 from decimal import Decimal
 
-from apps.bonuses.models import BonusLedgerEntry
-from apps.bonuses.models import BonusSpendRequest
+from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
 from apps.notifications import telegram as telegram_notifications
-from apps.referrals.models import ReferralLead
-from apps.referrals.models import ReferralLink
+from apps.referrals.models import ReferralLead, ReferralLink
 from apps.users.models import Participant
 
 
@@ -53,19 +51,17 @@ def get_participant_dashboard_data(*, telegram_id: str):
         return None
 
     referral_link = ReferralLink.objects.get(participant=participant)
-    accrued = (
-        BonusLedgerEntry.objects.filter(participant=participant)
-        .values_list("amount", flat=True)
-    )
-    spent = (
-        BonusSpendRequest.objects.filter(participant=participant, status="pending")
-        .values_list("amount", flat=True)
-    )
+    accrued = BonusLedgerEntry.objects.filter(participant=participant).values_list("amount", flat=True)
+    spent = BonusSpendRequest.objects.filter(
+        participant=participant,
+        status="pending",
+    ).values_list("amount", flat=True)
 
     balance = sum(accrued, Decimal("0.00")) - sum(spent, Decimal("0.00"))
 
     invited_leads = list(
         ReferralLead.objects.filter(referral_link=referral_link)
+        .exclude(client_name=participant.full_name, client_phone=participant.phone)
         .order_by("-created_at")
         .values_list("client_name", "status", "created_at")
     )
@@ -99,14 +95,14 @@ def create_bonus_spend_request(*, participant, amount: Decimal):
 
 def create_self_lead_request(*, telegram_id: str, product: str, quantity: str, comment: str):
     participant = Participant.objects.get(telegram_id=telegram_id)
-    referral_link = ReferralLink.objects.get(participant=participant)
     admin_comment = (
+        f"Участник программы: {participant.full_name}, {participant.phone}\n"
         f"Продукция: {product}\n"
         f"Тираж: {quantity}\n"
         f"Комментарий: {comment}"
     )
     lead = ReferralLead.objects.create(
-        referral_link=referral_link,
+        referral_link=None,
         client_name=participant.full_name,
         client_phone=participant.phone,
         admin_comment=admin_comment,
