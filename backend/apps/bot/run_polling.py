@@ -22,6 +22,7 @@ def build_dispatcher() -> Dispatcher:
 async def run() -> None:
     bot = Bot(token=get_bot_token())
     dispatcher = build_dispatcher()
+    await bot.delete_webhook(drop_pending_updates=True)
     await dispatcher.start_polling(bot)
 
 
