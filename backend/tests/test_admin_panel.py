@@ -21,6 +21,7 @@ def test_bonus_spend_request_admin_has_main_columns():
 
     assert admin_instance.list_display == (
         "participant",
+        "comment",
         "amount",
         "status",
         "created_at",

@@ -47,7 +47,7 @@ class BonusLedgerEntryAdmin(admin.ModelAdmin):
 
 @admin.register(BonusSpendRequest)
 class BonusSpendRequestAdmin(admin.ModelAdmin):
-    list_display = ("participant", "amount", "status", "created_at")
-    search_fields = ("participant__full_name", "participant__phone")
+    list_display = ("participant", "comment", "amount", "status", "created_at")
+    search_fields = ("participant__full_name", "participant__phone", "comment")
     list_filter = ("status", "created_at")
     autocomplete_fields = ("participant",)

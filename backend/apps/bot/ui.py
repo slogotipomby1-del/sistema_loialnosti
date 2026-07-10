@@ -1,5 +1,7 @@
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
+from apps.bot.gifts import GIFT_OFFERS, build_gift_button_text
+
 
 SITE_URL = "https://slogotipom.by/"
 
@@ -9,12 +11,14 @@ MY_LINK_BUTTON_TEXT = "Моя ссылка"
 INVITE_CLIENT_BUTTON_TEXT = "Пригласить клиента"
 MY_INVITED_BUTTON_TEXT = "Мои приглашённые"
 CONSULTATION_BUTTON_TEXT = "Получить консультацию"
+GIFTS_BUTTON_TEXT = "Подарки за бонусы"
 SPEND_BONUSES_BUTTON_TEXT = "Как потратить бонусы"
 RULES_BUTTON_TEXT = "Правила программы"
 CATALOG_BUTTON_TEXT = "Каталог / идеи подарков"
 SUPPORT_BUTTON_TEXT = "Связь с администратором"
 SEND_PHONE_BUTTON_TEXT = "Отправить телефон"
 CONSENT_BUTTON_TEXT = "Согласен(на)"
+BACK_TO_MENU_BUTTON_TEXT = "Назад в меню"
 
 
 def build_start_text() -> str:
@@ -41,6 +45,7 @@ def build_member_actions_keyboard() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=INVITE_CLIENT_BUTTON_TEXT)],
             [KeyboardButton(text=MY_INVITED_BUTTON_TEXT)],
             [KeyboardButton(text=CONSULTATION_BUTTON_TEXT)],
+            [KeyboardButton(text=GIFTS_BUTTON_TEXT)],
             [KeyboardButton(text=SPEND_BONUSES_BUTTON_TEXT)],
             [KeyboardButton(text=RULES_BUTTON_TEXT)],
             [KeyboardButton(text=CATALOG_BUTTON_TEXT)],
@@ -163,6 +168,40 @@ def build_catalog_text() -> str:
         "На сайте можно посмотреть каталог и идеи подарков:\n"
         f"{SITE_URL}\n\n"
         "Если захотите подборку под задачу, бюджет, тираж и сроки — вернитесь в бот и оставьте заявку."
+    )
+
+
+def build_gifts_keyboard() -> ReplyKeyboardMarkup:
+    keyboard = [[KeyboardButton(text=build_gift_button_text(offer))] for offer in GIFT_OFFERS]
+    keyboard.append([KeyboardButton(text=BACK_TO_MENU_BUTTON_TEXT)])
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True,
+    )
+
+
+def build_gifts_intro_text() -> str:
+    lines = [
+        "Подарки, которые можно запросить за мерч-бонусы:",
+        "",
+    ]
+    for offer in GIFT_OFFERS:
+        lines.append(f"— {offer['title']} — {offer['amount']} бонусов")
+        lines.append(f"  {offer['description']}")
+    lines.extend(
+        [
+            "",
+            "Нажмите на нужный вариант — и мы создадим заявку в админке.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def build_gift_request_sent_text(*, gift_title: str, gift_amount: int) -> str:
+    return (
+        f"Заявка на подарок «{gift_title}» отправлена.\n\n"
+        f"Зарезервировано: {gift_amount} бонусов.\n"
+        "Администратор посмотрит заявку и свяжется с вами по подтверждению."
     )
 
 

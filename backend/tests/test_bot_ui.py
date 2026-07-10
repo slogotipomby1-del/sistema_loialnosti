@@ -17,6 +17,7 @@ def test_member_actions_keyboard_has_expected_buttons():
         ui.INVITE_CLIENT_BUTTON_TEXT,
         ui.MY_INVITED_BUTTON_TEXT,
         ui.CONSULTATION_BUTTON_TEXT,
+        ui.GIFTS_BUTTON_TEXT,
         ui.SPEND_BONUSES_BUTTON_TEXT,
         ui.RULES_BUTTON_TEXT,
         ui.CATALOG_BUTTON_TEXT,
@@ -82,6 +83,16 @@ def test_spend_bonuses_text_contains_limits():
 
     assert "20%" in text
     assert "200 byn" in text.lower()
+
+
+def test_gifts_text_and_keyboard_contain_gift_options():
+    text = ui.build_gifts_intro_text()
+    keyboard = ui.build_gifts_keyboard()
+
+    assert "Термокружка" in text
+    assert "Худи" in text
+    labels = [row[0].text for row in keyboard.keyboard]
+    assert ui.BACK_TO_MENU_BUTTON_TEXT in labels
 
 
 def test_support_texts_are_present():

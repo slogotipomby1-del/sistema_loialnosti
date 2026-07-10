@@ -45,6 +45,10 @@ def get_participant_referral_data(*, telegram_id: str):
     return participant.full_name, referral_link.code
 
 
+def get_participant_by_telegram_id(*, telegram_id: str):
+    return Participant.objects.filter(telegram_id=telegram_id).first()
+
+
 def get_participant_dashboard_data(*, telegram_id: str):
     participant = Participant.objects.filter(telegram_id=telegram_id).first()
     if not participant:
@@ -85,10 +89,11 @@ def create_referral_lead(*, referral_code: str | None, client_name: str, client_
     return lead
 
 
-def create_bonus_spend_request(*, participant, amount: Decimal):
+def create_bonus_spend_request(*, participant, amount: Decimal, comment: str = ""):
     return BonusSpendRequest.objects.create(
         participant=participant,
         amount=amount,
+        comment=comment,
         status="pending",
     )
 

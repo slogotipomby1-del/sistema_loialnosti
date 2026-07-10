@@ -15,7 +15,12 @@ def test_member_can_create_bonus_spend_request():
         consent_accepted=True,
     )
 
-    request = create_bonus_spend_request(participant=participant, amount=Decimal("50.00"))
+    request = create_bonus_spend_request(
+        participant=participant,
+        amount=Decimal("50.00"),
+        comment="Термокружка с логотипом",
+    )
 
     assert request.status == "pending"
     assert request.amount == Decimal("50.00")
+    assert request.comment == "Термокружка с логотипом"
