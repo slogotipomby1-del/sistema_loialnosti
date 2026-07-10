@@ -5,16 +5,22 @@ from aiogram.types import Message
 from asgiref.sync import sync_to_async
 
 from apps.bot.services import (
+    get_participant_dashboard_data,
     get_participant_referral_data,
     register_participant_with_referral_code,
 )
 from apps.bot.ui import (
     CONSENT_BUTTON_TEXT,
     INVITE_CLIENT_BUTTON_TEXT,
+    MY_BALANCE_BUTTON_TEXT,
+    MY_INVITED_BUTTON_TEXT,
     MY_LINK_BUTTON_TEXT,
     REGISTER_BUTTON_TEXT,
+    build_balance_text,
     build_consent_keyboard,
+    build_empty_invited_text,
     build_invite_client_text,
+    build_invited_text,
     build_member_actions_keyboard,
     build_phone_keyboard,
     build_registration_success_text,
@@ -86,6 +92,66 @@ async def handle_invite_client(message: Message) -> None:
     referral_url = await build_referral_url(message, referral_code)
     await message.answer(
         build_invite_client_text(referral_url=referral_url),
+        reply_markup=build_member_actions_keyboard(),
+    )
+
+
+@router.message(F.text == MY_BALANCE_BUTTON_TEXT)
+async def handle_my_balance(message: Message) -> None:
+    dashboard_data = await sync_to_async(
+        get_participant_dashboard_data,
+        thread_sensitive=True,
+    )(telegram_id=str(message.from_user.id))
+
+    if not dashboard_data:
+        await message.answer(
+            "Сначала нужно зарегистрироваться, чтобы смотреть баланс.",
+            reply_markup=build_start_keyboard(),
+        )
+        return
+
+    balance = f"{dashboard_data['balance']:.2f}"
+    await message.answer(
+        build_balance_text(balance=balance),
+        reply_markup=build_member_actions_keyboard(),
+    )
+
+
+@router.message(F.text == MY_INVITED_BUTTON_TEXT)
+async def handle_my_invited(message: Message) -> None:
+    dashboard_data = await sync_to_async(
+        get_participant_dashboard_data,
+        thread_sensitive=True,
+    )(telegram_id=str(message.from_user.id))
+
+    if not dashboard_data:
+        await message.answer(
+            "Сначала нужно зарегистрироваться, чтобы смотреть приглашённых.",
+            reply_markup=build_start_keyboard(),
+        )
+        return
+
+    invited_leads = dashboard_data["invited_leads"]
+    if not invited_leads:
+        await message.answer(
+            build_empty_invited_text(),
+            reply_markup=build_member_actions_keyboard(),
+        )
+        return
+
+    status_map = {
+        "new": "Новая",
+        "in_progress": "В работе",
+        "ordered": "Ожидает подтверждения",
+        "bonus_confirmed": "Бонус подтверждён",
+        "rejected": "Отказ / не состоялось",
+    }
+    invited_lines = [
+        f"— {client_name} — {status_map.get(status, status)} — {created_at:%d.%m.%Y}"
+        for client_name, status, created_at in invited_leads
+    ]
+    await message.answer(
+        build_invited_text(invited_lines=invited_lines),
         reply_markup=build_member_actions_keyboard(),
     )
 

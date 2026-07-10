@@ -4,8 +4,10 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 SITE_URL = "https://slogotipom.by/"
 
 REGISTER_BUTTON_TEXT = "Зарегистрироваться"
+MY_BALANCE_BUTTON_TEXT = "Мой баланс"
 MY_LINK_BUTTON_TEXT = "Моя ссылка"
 INVITE_CLIENT_BUTTON_TEXT = "Пригласить клиента"
+MY_INVITED_BUTTON_TEXT = "Мои приглашённые"
 CONSULTATION_BUTTON_TEXT = "Получить консультацию"
 SPEND_BONUSES_BUTTON_TEXT = "Как потратить бонусы"
 RULES_BUTTON_TEXT = "Правила программы"
@@ -33,8 +35,10 @@ def build_start_keyboard() -> ReplyKeyboardMarkup:
 def build_member_actions_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
+            [KeyboardButton(text=MY_BALANCE_BUTTON_TEXT)],
             [KeyboardButton(text=MY_LINK_BUTTON_TEXT)],
             [KeyboardButton(text=INVITE_CLIENT_BUTTON_TEXT)],
+            [KeyboardButton(text=MY_INVITED_BUTTON_TEXT)],
             [KeyboardButton(text=CONSULTATION_BUTTON_TEXT)],
             [KeyboardButton(text=SPEND_BONUSES_BUTTON_TEXT)],
             [KeyboardButton(text=RULES_BUTTON_TEXT)],
@@ -157,4 +161,31 @@ def build_catalog_text() -> str:
         "На сайте можно посмотреть каталог и идеи подарков:\n"
         f"{SITE_URL}\n\n"
         "Если захотите подборку под задачу, бюджет, тираж и сроки — вернитесь в бот и оставьте заявку."
+    )
+
+
+def build_balance_text(*, balance: str) -> str:
+    return (
+        "Ваш баланс:\n"
+        f"{balance} мерч-бонусов\n\n"
+        "1 мерч-бонус = 1 BYN внутри программы.\n"
+        "Бонусы можно использовать на подарок, доставку, нанесение или часть следующего заказа."
+    )
+
+
+def build_empty_invited_text() -> str:
+    return (
+        "Пока у вас нет приглашённых клиентов.\n"
+        "Отправьте вашу персональную ссылку тем, кому могут быть нужны корпоративные подарки, "
+        "мерч или нанесение логотипа."
+    )
+
+
+def build_invited_text(*, invited_lines: list[str]) -> str:
+    invited_block = "\n".join(invited_lines)
+    return (
+        "Ваши приглашённые:\n"
+        f"{invited_block}\n\n"
+        "Статус «ожидает подтверждения» означает, что заявка уже зафиксирована, "
+        "но бонусы ещё не подтверждены администратором."
     )

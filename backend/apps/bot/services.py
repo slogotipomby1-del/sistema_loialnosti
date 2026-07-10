@@ -1,6 +1,7 @@
 import secrets
 from decimal import Decimal
 
+from apps.bonuses.models import BonusLedgerEntry
 from apps.bonuses.models import BonusSpendRequest
 from apps.notifications import telegram as telegram_notifications
 from apps.referrals.models import ReferralLead
@@ -44,6 +45,37 @@ def get_participant_referral_data(*, telegram_id: str):
 
     referral_link = ReferralLink.objects.get(participant=participant)
     return participant.full_name, referral_link.code
+
+
+def get_participant_dashboard_data(*, telegram_id: str):
+    participant = Participant.objects.filter(telegram_id=telegram_id).first()
+    if not participant:
+        return None
+
+    referral_link = ReferralLink.objects.get(participant=participant)
+    accrued = (
+        BonusLedgerEntry.objects.filter(participant=participant)
+        .values_list("amount", flat=True)
+    )
+    spent = (
+        BonusSpendRequest.objects.filter(participant=participant, status="pending")
+        .values_list("amount", flat=True)
+    )
+
+    balance = sum(accrued, Decimal("0.00")) - sum(spent, Decimal("0.00"))
+
+    invited_leads = list(
+        ReferralLead.objects.filter(referral_link=referral_link)
+        .order_by("-created_at")
+        .values_list("client_name", "status", "created_at")
+    )
+
+    return {
+        "full_name": participant.full_name,
+        "referral_code": referral_link.code,
+        "balance": balance,
+        "invited_leads": invited_leads,
+    }
 
 
 def create_referral_lead(*, referral_code: str | None, client_name: str, client_phone: str):

@@ -12,8 +12,10 @@ def test_member_actions_keyboard_has_expected_buttons():
     labels = [row[0].text for row in keyboard.keyboard]
 
     assert labels == [
+        ui.MY_BALANCE_BUTTON_TEXT,
         ui.MY_LINK_BUTTON_TEXT,
         ui.INVITE_CLIENT_BUTTON_TEXT,
+        ui.MY_INVITED_BUTTON_TEXT,
         ui.CONSULTATION_BUTTON_TEXT,
         ui.SPEND_BONUSES_BUTTON_TEXT,
         ui.RULES_BUTTON_TEXT,
@@ -79,3 +81,23 @@ def test_spend_bonuses_text_contains_limits():
 
     assert "20%" in text
     assert "200 byn" in text.lower()
+
+
+def test_balance_text_contains_amount():
+    text = ui.build_balance_text(balance="125.00")
+
+    assert "125.00" in text
+    assert "1 мерч-бонус = 1 BYN" in text
+
+
+def test_empty_invited_text_contains_hint():
+    text = ui.build_empty_invited_text()
+
+    assert "Пока у вас нет приглашённых" in text
+
+
+def test_invited_text_contains_status_explanation():
+    text = ui.build_invited_text(invited_lines=["— Компания А — Новая — 10.07.2026"])
+
+    assert "Компания А" in text
+    assert "ожидает подтверждения" in text.lower()

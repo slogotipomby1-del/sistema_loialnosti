@@ -8,6 +8,8 @@ from apps.bot.handlers.member import (
     handle_consent,
     handle_full_name,
     handle_invite_client,
+    handle_my_balance,
+    handle_my_invited,
     handle_phone,
     handle_share_link,
     start_registration,
@@ -97,6 +99,72 @@ def test_handle_invite_client_returns_ready_message(monkeypatch):
     sent_text = message.answer.await_args.args[0]
     assert "https://t.me/SvoyCorpStyleBot?start=abc123" in sent_text
     assert "корпоративный стиль" in sent_text.lower()
+
+
+def test_handle_my_balance_returns_balance(monkeypatch):
+    message = AsyncMock()
+    message.from_user = SimpleNamespace(id=12345)
+
+    monkeypatch.setattr(
+        "apps.bot.handlers.member.get_participant_dashboard_data",
+        lambda **kwargs: {
+            "full_name": "Анна Иванова",
+            "referral_code": "abc123",
+            "balance": 125.00,
+            "invited_leads": [],
+        },
+    )
+
+    asyncio.run(handle_my_balance(message))
+
+    message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0]
+    assert "125.00" in sent_text
+
+
+def test_handle_my_invited_returns_empty_state(monkeypatch):
+    message = AsyncMock()
+    message.from_user = SimpleNamespace(id=12345)
+
+    monkeypatch.setattr(
+        "apps.bot.handlers.member.get_participant_dashboard_data",
+        lambda **kwargs: {
+            "full_name": "Анна Иванова",
+            "referral_code": "abc123",
+            "balance": 0,
+            "invited_leads": [],
+        },
+    )
+
+    asyncio.run(handle_my_invited(message))
+
+    message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0]
+    assert "Пока у вас нет приглашённых" in sent_text
+
+
+def test_handle_my_invited_returns_leads(monkeypatch):
+    from datetime import datetime
+
+    message = AsyncMock()
+    message.from_user = SimpleNamespace(id=12345)
+
+    monkeypatch.setattr(
+        "apps.bot.handlers.member.get_participant_dashboard_data",
+        lambda **kwargs: {
+            "full_name": "Анна Иванова",
+            "referral_code": "abc123",
+            "balance": 0,
+            "invited_leads": [("Компания А", "ordered", datetime(2026, 7, 10))],
+        },
+    )
+
+    asyncio.run(handle_my_invited(message))
+
+    message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0]
+    assert "Компания А" in sent_text
+    assert "Ожидает подтверждения" in sent_text
 
 
 def test_handle_full_name_stores_name_and_asks_for_phone():
