@@ -1,6 +1,6 @@
 import os
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -36,3 +36,14 @@ def test_run_deletes_webhook_before_polling(monkeypatch):
 
     delete_webhook.assert_awaited_once_with(drop_pending_updates=True)
     start_polling.assert_awaited_once_with(fake_bot)
+
+
+def test_setup_django_sets_default_settings_module(monkeypatch):
+    setup_mock = Mock()
+    monkeypatch.delenv("DJANGO_SETTINGS_MODULE", raising=False)
+    monkeypatch.setattr("django.setup", setup_mock)
+
+    run_polling.setup_django()
+
+    assert os.environ["DJANGO_SETTINGS_MODULE"] == "config.settings"
+    setup_mock.assert_called_once()

@@ -2,8 +2,7 @@ import asyncio
 import os
 
 from aiogram import Bot, Dispatcher
-
-from apps.bot.router import build_router
+import django
 
 
 def get_bot_token() -> str:
@@ -13,13 +12,21 @@ def get_bot_token() -> str:
     return token
 
 
+def setup_django() -> None:
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+    django.setup()
+
+
 def build_dispatcher() -> Dispatcher:
+    from apps.bot.router import build_router
+
     dispatcher = Dispatcher()
     dispatcher.include_router(build_router())
     return dispatcher
 
 
 async def run() -> None:
+    setup_django()
     bot = Bot(token=get_bot_token())
     dispatcher = build_dispatcher()
     await bot.delete_webhook(drop_pending_updates=True)
