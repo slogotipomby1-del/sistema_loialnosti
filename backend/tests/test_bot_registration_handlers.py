@@ -76,18 +76,11 @@ def test_handle_consent_registers_participant_and_returns_referral_link(monkeypa
     message.bot = AsyncMock()
     message.bot.get_me.return_value = SimpleNamespace(username="SvoyCorpStyleBot")
 
-    participant = SimpleNamespace(
-        full_name="Анна Иванова",
-        referral_link=SimpleNamespace(code="abc123"),
-    )
-
     state = FakeState()
     state.data = {"full_name": "Анна Иванова", "phone": "+375291112233"}
-
-    register_mock = AsyncMock()
     monkeypatch.setattr(
-        "apps.bot.handlers.member.register_participant",
-        lambda **kwargs: participant,
+        "apps.bot.handlers.member.register_participant_with_referral_code",
+        lambda **kwargs: ("Анна Иванова", "abc123"),
     )
 
     asyncio.run(handle_consent(message, state))

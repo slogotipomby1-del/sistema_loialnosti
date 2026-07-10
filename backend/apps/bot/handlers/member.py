@@ -2,8 +2,9 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
+from asgiref.sync import sync_to_async
 
-from apps.bot.services import register_participant
+from apps.bot.services import register_participant_with_referral_code
 from apps.bot.ui import (
     CONSENT_BUTTON_TEXT,
     REGISTER_BUTTON_TEXT,
@@ -75,17 +76,20 @@ async def handle_phone(message: Message, state: FSMContext) -> None:
 @router.message(RegistrationStates.waiting_consent, F.text == CONSENT_BUTTON_TEXT)
 async def handle_consent(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
-    participant = register_participant(
+    full_name, referral_code = await sync_to_async(
+        register_participant_with_referral_code,
+        thread_sensitive=True,
+    )(
         telegram_id=str(message.from_user.id),
         full_name=data["full_name"],
         phone=data["phone"],
         consent_accepted=True,
     )
-    referral_url = await build_referral_url(message, participant.referral_link.code)
+    referral_url = await build_referral_url(message, referral_code)
     await state.clear()
     await message.answer(
         build_registration_success_text(
-            full_name=participant.full_name,
+            full_name=full_name,
             referral_url=referral_url,
         ),
         reply_markup=build_member_actions_keyboard(),
