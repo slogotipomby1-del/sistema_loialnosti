@@ -69,6 +69,15 @@ def build_registration_success_text(*, full_name: str, referral_url: str) -> str
     )
 
 
+def build_member_start_text(*, full_name: str) -> str:
+    return (
+        f"{full_name}, рады снова видеть вас в программе «Мерч-бонусы».\n\n"
+        "Здесь вы можете получить свою персональную ссылку, оставить заявку для себя "
+        "или использовать возможности программы.\n\n"
+        f"Сайт и каталог: {SITE_URL}"
+    )
+
+
 def build_share_link_text(*, full_name: str, referral_url: str) -> str:
     return (
         f"{full_name}, вот ваша персональная реферальная ссылка:\n"
