@@ -54,3 +54,24 @@ def create_bonus_spend_request(*, participant, amount: Decimal):
         amount=amount,
         status="pending",
     )
+
+
+def create_self_lead_request(*, telegram_id: str, product: str, quantity: str, comment: str):
+    participant = Participant.objects.get(telegram_id=telegram_id)
+    referral_link = ReferralLink.objects.get(participant=participant)
+    admin_comment = (
+        f"Продукция: {product}\n"
+        f"Тираж: {quantity}\n"
+        f"Комментарий: {comment}"
+    )
+    lead = ReferralLead.objects.create(
+        referral_link=referral_link,
+        client_name=participant.full_name,
+        client_phone=participant.phone,
+        admin_comment=admin_comment,
+    )
+    telegram_notifications.send_admin_notification(
+        f"Новая заявка от участника {participant.full_name}, {participant.phone}. "
+        f"Продукция: {product}. Тираж: {quantity}. Комментарий: {comment}"
+    )
+    return lead
