@@ -18,6 +18,14 @@ def test_member_actions_keyboard_has_expected_buttons():
     ]
 
 
+def test_start_text_contains_company_context_and_site():
+    text = ui.build_start_text()
+
+    assert "Мерч-бонусы" in text
+    assert "Корпоративный стиль" in text
+    assert ui.SITE_URL in text
+
+
 def test_registration_success_text_contains_referral_url():
     text = ui.build_registration_success_text(
         full_name="Ирина",
@@ -26,9 +34,10 @@ def test_registration_success_text_contains_referral_url():
 
     assert "Ирина" in text
     assert "https://t.me/SvoyCorpStyleBot?start=abc123" in text
+    assert ui.SITE_URL in text
 
 
-def test_share_link_text_contains_link_and_ready_message():
+def test_share_link_text_contains_link_ready_message_and_site():
     text = ui.build_share_link_text(
         full_name="Ирина",
         referral_url="https://t.me/SvoyCorpStyleBot?start=abc123",
@@ -37,3 +46,5 @@ def test_share_link_text_contains_link_and_ready_message():
     assert "Ирина" in text
     assert "https://t.me/SvoyCorpStyleBot?start=abc123" in text
     assert "Готовый текст для отправки" in text
+    assert "Какие бизнес-задачи это решает" in text
+    assert ui.SITE_URL in text
