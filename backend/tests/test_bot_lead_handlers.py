@@ -9,7 +9,6 @@ from apps.bot.handlers.lead import (
     handle_lead_quantity,
     start_lead_flow,
 )
-from apps.bot.ui import LEAVE_LEAD_BUTTON_TEXT
 
 
 class FakeState:

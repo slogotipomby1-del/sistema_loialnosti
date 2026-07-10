@@ -28,8 +28,8 @@ def test_start_command_replies_with_welcome_message_for_new_user(monkeypatch):
     assert state.cleared is True
     message.answer.assert_awaited_once()
     sent_text = message.answer.await_args.args[0]
-    assert "Корпоративный стиль" in sent_text
-    assert "зарегистрироваться" in sent_text.lower()
+    assert "Мерч-бонусы" in sent_text
+    assert "регистрацию" in sent_text.lower()
 
 
 def test_start_command_shows_member_menu_for_registered_user(monkeypatch):

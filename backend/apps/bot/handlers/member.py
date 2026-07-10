@@ -10,9 +10,11 @@ from apps.bot.services import (
 )
 from apps.bot.ui import (
     CONSENT_BUTTON_TEXT,
+    INVITE_CLIENT_BUTTON_TEXT,
+    MY_LINK_BUTTON_TEXT,
     REGISTER_BUTTON_TEXT,
-    SHARE_LINK_BUTTON_TEXT,
     build_consent_keyboard,
+    build_invite_client_text,
     build_member_actions_keyboard,
     build_phone_keyboard,
     build_registration_success_text,
@@ -41,7 +43,7 @@ async def start_registration(message: Message, state: FSMContext) -> None:
     await message.answer("Как вас зовут?")
 
 
-@router.message(F.text == SHARE_LINK_BUTTON_TEXT)
+@router.message(F.text == MY_LINK_BUTTON_TEXT)
 async def handle_share_link(message: Message) -> None:
     participant_data = await sync_to_async(
         get_participant_referral_data,
@@ -62,6 +64,28 @@ async def handle_share_link(message: Message) -> None:
             full_name=full_name,
             referral_url=referral_url,
         ),
+        reply_markup=build_member_actions_keyboard(),
+    )
+
+
+@router.message(F.text == INVITE_CLIENT_BUTTON_TEXT)
+async def handle_invite_client(message: Message) -> None:
+    participant_data = await sync_to_async(
+        get_participant_referral_data,
+        thread_sensitive=True,
+    )(telegram_id=str(message.from_user.id))
+
+    if not participant_data:
+        await message.answer(
+            "Сначала нужно зарегистрироваться, чтобы приглашать клиентов.",
+            reply_markup=build_start_keyboard(),
+        )
+        return
+
+    _, referral_code = participant_data
+    referral_url = await build_referral_url(message, referral_code)
+    await message.answer(
+        build_invite_client_text(referral_url=referral_url),
         reply_markup=build_member_actions_keyboard(),
     )
 
