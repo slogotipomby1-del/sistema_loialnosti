@@ -20,6 +20,7 @@ def test_member_actions_keyboard_has_expected_buttons():
         ui.SPEND_BONUSES_BUTTON_TEXT,
         ui.RULES_BUTTON_TEXT,
         ui.CATALOG_BUTTON_TEXT,
+        ui.SUPPORT_BUTTON_TEXT,
     ]
 
 
@@ -81,6 +82,14 @@ def test_spend_bonuses_text_contains_limits():
 
     assert "20%" in text
     assert "200 byn" in text.lower()
+
+
+def test_support_texts_are_present():
+    prompt = ui.build_support_prompt_text()
+    sent = ui.build_support_sent_text()
+
+    assert "администратору" in prompt.lower()
+    assert "отправлено" in sent.lower()
 
 
 def test_balance_text_contains_amount():

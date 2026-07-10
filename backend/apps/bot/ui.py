@@ -12,6 +12,7 @@ CONSULTATION_BUTTON_TEXT = "Получить консультацию"
 SPEND_BONUSES_BUTTON_TEXT = "Как потратить бонусы"
 RULES_BUTTON_TEXT = "Правила программы"
 CATALOG_BUTTON_TEXT = "Каталог / идеи подарков"
+SUPPORT_BUTTON_TEXT = "Связь с администратором"
 SEND_PHONE_BUTTON_TEXT = "Отправить телефон"
 CONSENT_BUTTON_TEXT = "Согласен(на)"
 
@@ -43,6 +44,7 @@ def build_member_actions_keyboard() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=SPEND_BONUSES_BUTTON_TEXT)],
             [KeyboardButton(text=RULES_BUTTON_TEXT)],
             [KeyboardButton(text=CATALOG_BUTTON_TEXT)],
+            [KeyboardButton(text=SUPPORT_BUTTON_TEXT)],
         ],
         resize_keyboard=True,
     )
@@ -162,6 +164,22 @@ def build_catalog_text() -> str:
         f"{SITE_URL}\n\n"
         "Если захотите подборку под задачу, бюджет, тираж и сроки — вернитесь в бот и оставьте заявку."
     )
+
+
+def build_support_prompt_text() -> str:
+    return (
+        "Напишите ваш вопрос администратору программы.\n\n"
+        "Можно обратиться по вопросам:\n"
+        "— начисления бонусов;\n"
+        "— списания бонусов;\n"
+        "— приглашённых клиентов;\n"
+        "— заявок;\n"
+        "— правил программы."
+    )
+
+
+def build_support_sent_text() -> str:
+    return "Сообщение отправлено администратору. Мы ответим вам в ближайшее рабочее время."
 
 
 def build_balance_text(*, balance: str) -> str:
