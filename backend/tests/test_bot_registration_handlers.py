@@ -8,6 +8,7 @@ from apps.bot.handlers.member import (
     handle_consent,
     handle_full_name,
     handle_phone,
+    handle_share_link,
     start_registration,
 )
 
@@ -40,6 +41,42 @@ def test_start_registration_asks_for_name():
 
     assert state.current_state == RegistrationStates.waiting_full_name
     message.answer.assert_awaited_once_with("Как вас зовут?")
+
+
+def test_handle_share_link_returns_personal_link_for_registered_participant(monkeypatch):
+    message = AsyncMock()
+    message.from_user = SimpleNamespace(id=12345)
+    message.bot = AsyncMock()
+    message.bot.get_me.return_value = SimpleNamespace(username="SvoyCorpStyleBot")
+
+    monkeypatch.setattr(
+        "apps.bot.handlers.member.get_participant_referral_data",
+        lambda **kwargs: ("Анна Иванова", "abc123"),
+    )
+
+    asyncio.run(handle_share_link(message))
+
+    message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0]
+    assert "Анна Иванова" in sent_text
+    assert "https://t.me/SvoyCorpStyleBot?start=abc123" in sent_text
+    assert "Готовый текст для отправки" in sent_text
+
+
+def test_handle_share_link_asks_to_register_if_participant_not_found(monkeypatch):
+    message = AsyncMock()
+    message.from_user = SimpleNamespace(id=12345)
+
+    monkeypatch.setattr(
+        "apps.bot.handlers.member.get_participant_referral_data",
+        lambda **kwargs: None,
+    )
+
+    asyncio.run(handle_share_link(message))
+
+    message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0]
+    assert "Сначала нужно зарегистрироваться" in sent_text
 
 
 def test_handle_full_name_stores_name_and_asks_for_phone():

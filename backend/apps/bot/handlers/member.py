@@ -4,14 +4,20 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 from asgiref.sync import sync_to_async
 
-from apps.bot.services import register_participant_with_referral_code
+from apps.bot.services import (
+    get_participant_referral_data,
+    register_participant_with_referral_code,
+)
 from apps.bot.ui import (
     CONSENT_BUTTON_TEXT,
     REGISTER_BUTTON_TEXT,
+    SHARE_LINK_BUTTON_TEXT,
     build_consent_keyboard,
     build_member_actions_keyboard,
     build_phone_keyboard,
     build_registration_success_text,
+    build_share_link_text,
+    build_start_keyboard,
 )
 
 
@@ -33,6 +39,31 @@ async def build_referral_url(message: Message, referral_code: str) -> str:
 async def start_registration(message: Message, state: FSMContext) -> None:
     await state.set_state(RegistrationStates.waiting_full_name)
     await message.answer("Как вас зовут?")
+
+
+@router.message(F.text == SHARE_LINK_BUTTON_TEXT)
+async def handle_share_link(message: Message) -> None:
+    participant_data = await sync_to_async(
+        get_participant_referral_data,
+        thread_sensitive=True,
+    )(telegram_id=str(message.from_user.id))
+
+    if not participant_data:
+        await message.answer(
+            "Сначала нужно зарегистрироваться, чтобы получить персональную ссылку.",
+            reply_markup=build_start_keyboard(),
+        )
+        return
+
+    full_name, referral_code = participant_data
+    referral_url = await build_referral_url(message, referral_code)
+    await message.answer(
+        build_share_link_text(
+            full_name=full_name,
+            referral_url=referral_url,
+        ),
+        reply_markup=build_member_actions_keyboard(),
+    )
 
 
 @router.message(RegistrationStates.waiting_full_name)

@@ -37,6 +37,15 @@ def register_participant_with_referral_code(
     return participant.full_name, referral_link.code
 
 
+def get_participant_referral_data(*, telegram_id: str):
+    participant = Participant.objects.filter(telegram_id=telegram_id).first()
+    if not participant:
+        return None
+
+    referral_link = ReferralLink.objects.get(participant=participant)
+    return participant.full_name, referral_link.code
+
+
 def create_referral_lead(*, referral_code: str | None, client_name: str, client_phone: str):
     referral_link = ReferralLink.objects.filter(code=referral_code).first() if referral_code else None
     lead = ReferralLead.objects.create(

@@ -26,3 +26,14 @@ def test_registration_success_text_contains_referral_url():
 
     assert "Ирина" in text
     assert "https://t.me/SvoyCorpStyleBot?start=abc123" in text
+
+
+def test_share_link_text_contains_link_and_ready_message():
+    text = ui.build_share_link_text(
+        full_name="Ирина",
+        referral_url="https://t.me/SvoyCorpStyleBot?start=abc123",
+    )
+
+    assert "Ирина" in text
+    assert "https://t.me/SvoyCorpStyleBot?start=abc123" in text
+    assert "Готовый текст для отправки" in text
