@@ -42,6 +42,7 @@ def test_real_referral_lead_is_shown_in_invited_list():
         referral_code=link.code,
         client_name="ООО Клиент",
         client_phone="+375293333333",
+        client_company="ООО Клиент",
     )
 
     dashboard = get_participant_dashboard_data(telegram_id="2002")

@@ -5,6 +5,9 @@ class Participant(models.Model):
     telegram_id = models.CharField(max_length=64, unique=True)
     full_name = models.CharField(max_length=255)
     phone = models.CharField(max_length=32)
+    company = models.CharField(max_length=255, blank=True, default="")
+    position = models.CharField(max_length=255, blank=True, default="")
+    is_primary_contact = models.BooleanField(default=False)
     consent_accepted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

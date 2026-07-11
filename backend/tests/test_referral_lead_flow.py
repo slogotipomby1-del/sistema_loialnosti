@@ -17,7 +17,9 @@ def test_lead_created_from_referral_keeps_referrer_relation():
         referral_link=link,
         client_name="OOO Client",
         client_phone="+375291234567",
+        client_company="OOO Client",
         status="new",
     )
 
     assert lead.referral_link.participant == participant
+    assert lead.client_company == "OOO Client"

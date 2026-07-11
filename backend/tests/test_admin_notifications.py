@@ -24,9 +24,11 @@ def test_lead_creation_triggers_admin_notification(monkeypatch):
 
     lead = create_referral_lead(
         referral_code=link.code,
-        client_name="OOO New Client",
+        client_name="Ivan Ivanov",
         client_phone="+375292222222",
+        client_company="OOO New Client",
     )
 
     assert lead.referral_link == link
     assert "OOO New Client" in sent["text"]
+    assert "Ivan Ivanov" in sent["text"]

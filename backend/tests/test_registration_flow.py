@@ -31,4 +31,7 @@ def test_registered_participant_has_data_needed_for_member_menu():
     link = ReferralLink.objects.get(participant=participant)
 
     assert participant.full_name == "Sergey Kozlov"
+    assert participant.company == ""
+    assert participant.position == ""
+    assert participant.is_primary_contact is False
     assert link.code

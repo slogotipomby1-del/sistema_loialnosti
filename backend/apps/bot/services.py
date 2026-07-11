@@ -49,6 +49,16 @@ def get_participant_by_telegram_id(*, telegram_id: str):
     return Participant.objects.filter(telegram_id=telegram_id).first()
 
 
+def update_participant_profile(*, telegram_id: str, company: str = "", position: str = ""):
+    participant = Participant.objects.get(telegram_id=telegram_id)
+    if company:
+        participant.company = company
+    if position:
+        participant.position = position
+    participant.save(update_fields=["company", "position"])
+    return participant
+
+
 def get_participant_dashboard_data(*, telegram_id: str):
     participant = Participant.objects.filter(telegram_id=telegram_id).first()
     if not participant:
@@ -78,14 +88,24 @@ def get_participant_dashboard_data(*, telegram_id: str):
     }
 
 
-def create_referral_lead(*, referral_code: str | None, client_name: str, client_phone: str):
+def create_referral_lead(
+    *,
+    referral_code: str | None,
+    client_name: str,
+    client_phone: str,
+    client_company: str = "",
+):
     referral_link = ReferralLink.objects.filter(code=referral_code).first() if referral_code else None
     lead = ReferralLead.objects.create(
         referral_link=referral_link,
+        client_company=client_company,
         client_name=client_name,
         client_phone=client_phone,
     )
-    telegram_notifications.send_admin_notification(f"Новая заявка: {client_name}, {client_phone}")
+    company_line = f"\nКомпания: {client_company}" if client_company else ""
+    telegram_notifications.send_admin_notification(
+        f"Новая заявка:{company_line}\nКонтакт: {client_name}\nТелефон: {client_phone}"
+    )
     return lead
 
 
@@ -100,20 +120,31 @@ def create_bonus_spend_request(*, participant, amount: Decimal, comment: str = "
 
 def create_self_lead_request(*, telegram_id: str, product: str, quantity: str, comment: str):
     participant = Participant.objects.get(telegram_id=telegram_id)
+    participant_company = participant.company or "не указана"
+    participant_position = participant.position or "не указана"
     admin_comment = (
         f"Участник программы: {participant.full_name}, {participant.phone}\n"
+        f"Компания участника: {participant_company}\n"
+        f"Должность: {participant_position}\n"
         f"Продукция: {product}\n"
         f"Тираж: {quantity}\n"
         f"Комментарий: {comment}"
     )
     lead = ReferralLead.objects.create(
         referral_link=None,
+        client_company=participant.company,
         client_name=participant.full_name,
         client_phone=participant.phone,
         admin_comment=admin_comment,
     )
     telegram_notifications.send_admin_notification(
-        f"Новая заявка от участника {participant.full_name}, {participant.phone}. "
-        f"Продукция: {product}. Тираж: {quantity}. Комментарий: {comment}"
+        f"Новая заявка от участника.\n"
+        f"Участник: {participant.full_name}\n"
+        f"Телефон: {participant.phone}\n"
+        f"Компания: {participant_company}\n"
+        f"Должность: {participant_position}\n"
+        f"Продукция: {product}\n"
+        f"Тираж: {quantity}\n"
+        f"Комментарий: {comment}"
     )
     return lead

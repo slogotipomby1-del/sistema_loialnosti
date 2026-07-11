@@ -8,6 +8,7 @@ def test_referral_lead_admin_has_main_columns():
     admin_instance = site._registry[ReferralLead]
 
     assert admin_instance.list_display == (
+        "client_company",
         "client_name",
         "client_phone",
         "referrer_name",

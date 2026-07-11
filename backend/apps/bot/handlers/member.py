@@ -8,6 +8,7 @@ from apps.bot.services import (
     get_participant_dashboard_data,
     get_participant_referral_data,
     register_participant_with_referral_code,
+    update_participant_profile,
 )
 from apps.bot.ui import (
     CONSENT_BUTTON_TEXT,
@@ -16,6 +17,7 @@ from apps.bot.ui import (
     MY_INVITED_BUTTON_TEXT,
     MY_LINK_BUTTON_TEXT,
     REGISTER_BUTTON_TEXT,
+    SKIP_BUTTON_TEXT,
     build_balance_text,
     build_consent_keyboard,
     build_empty_invited_text,
@@ -23,8 +25,12 @@ from apps.bot.ui import (
     build_invited_text,
     build_member_actions_keyboard,
     build_phone_keyboard,
+    build_profile_company_prompt_text,
+    build_profile_position_prompt_text,
+    build_profile_saved_text,
     build_registration_success_text,
     build_share_link_text,
+    build_skip_keyboard,
     build_start_keyboard,
 )
 
@@ -36,6 +42,8 @@ class RegistrationStates(StatesGroup):
     waiting_full_name = State()
     waiting_phone = State()
     waiting_consent = State()
+    waiting_company = State()
+    waiting_position = State()
 
 
 async def build_referral_url(message: Message, referral_code: str) -> str:
@@ -51,10 +59,9 @@ async def start_registration(message: Message, state: FSMContext) -> None:
 
 @router.message(F.text == MY_LINK_BUTTON_TEXT)
 async def handle_share_link(message: Message) -> None:
-    participant_data = await sync_to_async(
-        get_participant_referral_data,
-        thread_sensitive=True,
-    )(telegram_id=str(message.from_user.id))
+    participant_data = await sync_to_async(get_participant_referral_data, thread_sensitive=True)(
+        telegram_id=str(message.from_user.id)
+    )
 
     if not participant_data:
         await message.answer(
@@ -66,20 +73,16 @@ async def handle_share_link(message: Message) -> None:
     full_name, referral_code = participant_data
     referral_url = await build_referral_url(message, referral_code)
     await message.answer(
-        build_share_link_text(
-            full_name=full_name,
-            referral_url=referral_url,
-        ),
+        build_share_link_text(full_name=full_name, referral_url=referral_url),
         reply_markup=build_member_actions_keyboard(),
     )
 
 
 @router.message(F.text == INVITE_CLIENT_BUTTON_TEXT)
 async def handle_invite_client(message: Message) -> None:
-    participant_data = await sync_to_async(
-        get_participant_referral_data,
-        thread_sensitive=True,
-    )(telegram_id=str(message.from_user.id))
+    participant_data = await sync_to_async(get_participant_referral_data, thread_sensitive=True)(
+        telegram_id=str(message.from_user.id)
+    )
 
     if not participant_data:
         await message.answer(
@@ -98,10 +101,9 @@ async def handle_invite_client(message: Message) -> None:
 
 @router.message(F.text == MY_BALANCE_BUTTON_TEXT)
 async def handle_my_balance(message: Message) -> None:
-    dashboard_data = await sync_to_async(
-        get_participant_dashboard_data,
-        thread_sensitive=True,
-    )(telegram_id=str(message.from_user.id))
+    dashboard_data = await sync_to_async(get_participant_dashboard_data, thread_sensitive=True)(
+        telegram_id=str(message.from_user.id)
+    )
 
     if not dashboard_data:
         await message.answer(
@@ -119,10 +121,9 @@ async def handle_my_balance(message: Message) -> None:
 
 @router.message(F.text == MY_INVITED_BUTTON_TEXT)
 async def handle_my_invited(message: Message) -> None:
-    dashboard_data = await sync_to_async(
-        get_participant_dashboard_data,
-        thread_sensitive=True,
-    )(telegram_id=str(message.from_user.id))
+    dashboard_data = await sync_to_async(get_participant_dashboard_data, thread_sensitive=True)(
+        telegram_id=str(message.from_user.id)
+    )
 
     if not dashboard_data:
         await message.answer(
@@ -165,10 +166,7 @@ async def handle_full_name(message: Message, state: FSMContext) -> None:
 
     await state.update_data(full_name=full_name)
     await state.set_state(RegistrationStates.waiting_phone)
-    await message.answer(
-        "Укажите ваш телефон.",
-        reply_markup=build_phone_keyboard(),
-    )
+    await message.answer("Укажите ваш телефон.", reply_markup=build_phone_keyboard())
 
 
 @router.message(RegistrationStates.waiting_phone)
@@ -207,12 +205,45 @@ async def handle_consent(message: Message, state: FSMContext) -> None:
         consent_accepted=True,
     )
     referral_url = await build_referral_url(message, referral_code)
+    await state.set_state(RegistrationStates.waiting_company)
+    await message.answer(
+        build_registration_success_text(full_name=full_name, referral_url=referral_url)
+    )
+    await message.answer(
+        build_profile_company_prompt_text(),
+        reply_markup=build_skip_keyboard(),
+    )
+
+
+@router.message(RegistrationStates.waiting_company)
+async def handle_company(message: Message, state: FSMContext) -> None:
+    company = (message.text or "").strip()
+    if company == SKIP_BUTTON_TEXT:
+        company = ""
+
+    await state.update_data(company=company)
+    await state.set_state(RegistrationStates.waiting_position)
+    await message.answer(
+        build_profile_position_prompt_text(),
+        reply_markup=build_skip_keyboard(),
+    )
+
+
+@router.message(RegistrationStates.waiting_position)
+async def handle_position(message: Message, state: FSMContext) -> None:
+    position = (message.text or "").strip()
+    if position == SKIP_BUTTON_TEXT:
+        position = ""
+
+    data = await state.get_data()
+    participant = await sync_to_async(update_participant_profile, thread_sensitive=True)(
+        telegram_id=str(message.from_user.id),
+        company=data.get("company", ""),
+        position=position,
+    )
     await state.clear()
     await message.answer(
-        build_registration_success_text(
-            full_name=full_name,
-            referral_url=referral_url,
-        ),
+        build_profile_saved_text(company=participant.company, position=participant.position),
         reply_markup=build_member_actions_keyboard(),
     )
 

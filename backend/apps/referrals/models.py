@@ -28,6 +28,7 @@ class ReferralLead(models.Model):
         on_delete=models.SET_NULL,
         related_name="leads",
     )
+    client_company = models.CharField(max_length=255, blank=True, default="")
     client_name = models.CharField(max_length=255)
     client_phone = models.CharField(max_length=32)
     status = models.CharField(

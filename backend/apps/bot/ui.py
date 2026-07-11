@@ -15,6 +15,7 @@ CATALOG_BUTTON_TEXT = "Каталог / идеи подарков"
 SUPPORT_BUTTON_TEXT = "Связь с администратором"
 SEND_PHONE_BUTTON_TEXT = "Отправить телефон"
 CONSENT_BUTTON_TEXT = "Согласен(на)"
+SKIP_BUTTON_TEXT = "Пропустить"
 
 
 def build_start_text() -> str:
@@ -67,6 +68,14 @@ def build_consent_keyboard() -> ReplyKeyboardMarkup:
     )
 
 
+def build_skip_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=SKIP_BUTTON_TEXT)]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+
+
 def build_registration_success_text(*, full_name: str, referral_url: str) -> str:
     return (
         f"Готово! {full_name}, вы зарегистрированы в программе «Мерч-бонусы» 🎁\n\n"
@@ -74,6 +83,28 @@ def build_registration_success_text(*, full_name: str, referral_url: str) -> str
         f"{referral_url}\n\n"
         "Делитесь ею с компаниями, которым могут быть нужны корпоративные подарки, мерч, "
         "наборы или нанесение логотипа."
+    )
+
+
+def build_profile_company_prompt_text() -> str:
+    return (
+        "Чтобы точнее учитывать рекомендации и избегать дублей, можно сразу заполнить профиль.\n\n"
+        "Укажите вашу компанию, если хотите. Это поле можно пропустить."
+    )
+
+
+def build_profile_position_prompt_text() -> str:
+    return "Укажите вашу должность, если хотите. Например: HR, маркетолог, руководитель, закупки."
+
+
+def build_profile_saved_text(*, company: str, position: str) -> str:
+    company_text = company or "не указана"
+    position_text = position or "не указана"
+    return (
+        "Профиль участника сохранён.\n"
+        f"Компания: {company_text}\n"
+        f"Должность: {position_text}\n\n"
+        "Если в одной компании будет несколько участников, основного контакта администратор назначит вручную."
     )
 
 
@@ -147,7 +178,7 @@ def build_rules_text() -> str:
         "5. Минимальная сумма заказа для начисления — от 2000 BYN.\n"
         "6. Бонусы не начисляются на тендерные, скидочные, спецусловные и низкомаржинальные заказы.\n"
         "7. Рекомендация засчитывается по первой зафиксированной ссылке.\n"
-        "8. Бонусы можно использовать на подарок, доставку, нанесение или часть следующего заказа."
+        "8. Если в одной компании несколько участников, бонус за покупку компании начисляется основному контакту, которого администратор назначает вручную."
     )
 
 
@@ -176,11 +207,7 @@ def build_gifts_intro_text() -> str:
 
 
 def build_gift_card_text(*, index: int, title: str, description: str, amount: int, is_available: bool) -> str:
-    if is_available:
-        price_line = f"Стоимость: {amount} бонусов"
-    else:
-        price_line = "Скоро появится"
-
+    price_line = f"Стоимость: {amount} бонусов" if is_available else "Скоро появится"
     return (
         f"Подарок {index}/5\n"
         f"{title}\n\n"
@@ -191,16 +218,9 @@ def build_gift_card_text(*, index: int, title: str, description: str, amount: in
 
 def build_gift_card_keyboard(*, slug: str, is_available: bool) -> InlineKeyboardMarkup:
     if is_available:
-        button = InlineKeyboardButton(
-            text="Хочу этот подарок",
-            callback_data=f"gift:choose:{slug}",
-        )
+        button = InlineKeyboardButton(text="Хочу этот подарок", callback_data=f"gift:choose:{slug}")
     else:
-        button = InlineKeyboardButton(
-            text="Скоро добавим",
-            callback_data=f"gift:soon:{slug}",
-        )
-
+        button = InlineKeyboardButton(text="Скоро добавим", callback_data=f"gift:soon:{slug}")
     return InlineKeyboardMarkup(inline_keyboard=[[button]])
 
 
