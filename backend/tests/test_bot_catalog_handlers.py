@@ -5,7 +5,17 @@ from apps.bot.handlers.catalog import (
     handle_catalog,
     handle_rules,
     handle_spend_bonuses,
+    open_spend_menu,
 )
+
+
+def test_open_spend_menu_returns_intro():
+    message = AsyncMock()
+
+    asyncio.run(open_spend_menu(message))
+
+    message.answer.assert_awaited_once()
+    assert "Потратить бонусы" in message.answer.await_args.args[0]
 
 
 def test_handle_catalog_returns_site_and_ideas():

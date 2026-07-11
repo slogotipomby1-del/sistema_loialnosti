@@ -5,7 +5,7 @@ from aiogram.types import Message
 from asgiref.sync import sync_to_async
 
 from apps.bot.services import create_self_lead_request
-from apps.bot.ui import CONSULTATION_BUTTON_TEXT, build_member_actions_keyboard
+from apps.bot.ui import OWN_COMPANY_ORDER_BUTTON_TEXT, build_cabinet_keyboard
 
 
 router = Router(name="lead")
@@ -17,7 +17,7 @@ class LeadStates(StatesGroup):
     waiting_comment = State()
 
 
-@router.message(F.text == CONSULTATION_BUTTON_TEXT)
+@router.message(F.text == OWN_COMPANY_ORDER_BUTTON_TEXT)
 async def start_lead_flow(message: Message, state: FSMContext) -> None:
     await state.set_state(LeadStates.waiting_product)
     await message.answer("Какая продукция вас интересует?")
@@ -64,5 +64,5 @@ async def handle_lead_comment(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(
         "Заявка принята. Мы свяжемся с вами после обработки.",
-        reply_markup=build_member_actions_keyboard(),
+        reply_markup=build_cabinet_keyboard(),
     )

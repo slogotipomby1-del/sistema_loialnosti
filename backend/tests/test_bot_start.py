@@ -29,7 +29,7 @@ def test_start_command_replies_with_welcome_message_for_new_user(monkeypatch):
     message.answer.assert_awaited_once()
     sent_text = message.answer.await_args.args[0]
     assert "Мерч-бонусы" in sent_text
-    assert "регистрацию" in sent_text.lower()
+    assert "регистрац" in sent_text.lower()
 
 
 def test_start_command_shows_member_menu_for_registered_user(monkeypatch):
@@ -48,4 +48,4 @@ def test_start_command_shows_member_menu_for_registered_user(monkeypatch):
     message.answer.assert_awaited_once()
     sent_text = message.answer.await_args.args[0]
     assert "Ольга" in sent_text
-    assert "рады снова видеть" in sent_text.lower()
+    assert "выберите нужный раздел" in sent_text.lower()

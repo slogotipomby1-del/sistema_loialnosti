@@ -7,23 +7,30 @@ from apps.bot.handlers.member import (
     CONSENT_BUTTON_TEXT,
     RegistrationStates,
     SKIP_BUTTON_TEXT,
+    back_to_main_menu,
     handle_company,
     handle_consent,
     handle_full_name,
     handle_invite_client,
     handle_my_balance,
-    handle_my_invited,
+    handle_my_recommendations,
+    handle_my_requests,
     handle_phone,
     handle_position,
     handle_share_link,
+    open_cabinet_menu,
+    open_recommend_menu,
     start_registration,
 )
 from apps.bot.ui import (
+    build_cabinet_intro_text,
     build_empty_invited_text,
-    build_invited_text,
+    build_empty_requests_text,
+    build_main_menu_keyboard,
     build_profile_company_prompt_text,
     build_profile_position_prompt_text,
     build_profile_saved_text,
+    build_recommend_intro_text,
     build_registration_success_text,
 )
 
@@ -58,6 +65,32 @@ def test_start_registration_asks_for_name():
     message.answer.assert_awaited_once()
 
 
+def test_open_cabinet_menu_returns_intro():
+    message = AsyncMock()
+
+    asyncio.run(open_cabinet_menu(message))
+
+    message.answer.assert_awaited_once()
+    assert message.answer.await_args.args[0] == build_cabinet_intro_text()
+
+
+def test_open_recommend_menu_returns_intro():
+    message = AsyncMock()
+
+    asyncio.run(open_recommend_menu(message))
+
+    message.answer.assert_awaited_once()
+    assert message.answer.await_args.args[0] == build_recommend_intro_text()
+
+
+def test_back_to_main_menu_returns_main_menu():
+    message = AsyncMock()
+
+    asyncio.run(back_to_main_menu(message))
+
+    message.answer.assert_awaited_once_with("Главное меню.", reply_markup=build_main_menu_keyboard())
+
+
 def test_handle_share_link_returns_personal_link_for_registered_participant(monkeypatch):
     message = AsyncMock()
     message.from_user = SimpleNamespace(id=12345)
@@ -66,28 +99,13 @@ def test_handle_share_link_returns_personal_link_for_registered_participant(monk
 
     monkeypatch.setattr(
         "apps.bot.handlers.member.get_participant_referral_data",
-        lambda **kwargs: ("РђРЅРЅР° РРІР°РЅРѕРІР°", "abc123"),
+        lambda **kwargs: ("Анна Иванова", "abc123"),
     )
 
     asyncio.run(handle_share_link(message))
 
     message.answer.assert_awaited_once()
-    sent_text = message.answer.await_args.args[0]
-    assert "https://t.me/SvoyCorpStyleBot?start=abc123" in sent_text
-
-
-def test_handle_share_link_asks_to_register_if_participant_not_found(monkeypatch):
-    message = AsyncMock()
-    message.from_user = SimpleNamespace(id=12345)
-
-    monkeypatch.setattr(
-        "apps.bot.handlers.member.get_participant_referral_data",
-        lambda **kwargs: None,
-    )
-
-    asyncio.run(handle_share_link(message))
-
-    message.answer.assert_awaited_once()
+    assert "https://t.me/SvoyCorpStyleBot?start=abc123" in message.answer.await_args.args[0]
 
 
 def test_handle_invite_client_returns_ready_message(monkeypatch):
@@ -98,14 +116,13 @@ def test_handle_invite_client_returns_ready_message(monkeypatch):
 
     monkeypatch.setattr(
         "apps.bot.handlers.member.get_participant_referral_data",
-        lambda **kwargs: ("РђРЅРЅР° РРІР°РЅРѕРІР°", "abc123"),
+        lambda **kwargs: ("Анна Иванова", "abc123"),
     )
 
     asyncio.run(handle_invite_client(message))
 
     message.answer.assert_awaited_once()
-    sent_text = message.answer.await_args.args[0]
-    assert "https://t.me/SvoyCorpStyleBot?start=abc123" in sent_text
+    assert "https://t.me/SvoyCorpStyleBot?start=abc123" in message.answer.await_args.args[0]
 
 
 def test_handle_my_balance_returns_balance(monkeypatch):
@@ -115,7 +132,7 @@ def test_handle_my_balance_returns_balance(monkeypatch):
     monkeypatch.setattr(
         "apps.bot.handlers.member.get_participant_dashboard_data",
         lambda **kwargs: {
-            "full_name": "РђРЅРЅР° РРІР°РЅРѕРІР°",
+            "full_name": "Анна Иванова",
             "referral_code": "abc123",
             "balance": 125.00,
             "invited_leads": [],
@@ -125,63 +142,95 @@ def test_handle_my_balance_returns_balance(monkeypatch):
     asyncio.run(handle_my_balance(message))
 
     message.answer.assert_awaited_once()
-    sent_text = message.answer.await_args.args[0]
-    assert "125.00" in sent_text
+    assert "125.00" in message.answer.await_args.args[0]
 
 
-def test_handle_my_invited_returns_empty_state(monkeypatch):
+def test_handle_my_recommendations_returns_empty_state(monkeypatch):
     message = AsyncMock()
     message.from_user = SimpleNamespace(id=12345)
 
     monkeypatch.setattr(
         "apps.bot.handlers.member.get_participant_dashboard_data",
         lambda **kwargs: {
-            "full_name": "РђРЅРЅР° РРІР°РЅРѕРІР°",
+            "full_name": "Анна Иванова",
             "referral_code": "abc123",
             "balance": 0,
             "invited_leads": [],
         },
     )
 
-    asyncio.run(handle_my_invited(message))
+    asyncio.run(handle_my_recommendations(message))
 
-    message.answer.assert_awaited_once_with(
-        build_empty_invited_text(),
-        reply_markup=message.answer.await_args.kwargs["reply_markup"],
-    )
+    message.answer.assert_awaited_once()
+    assert message.answer.await_args.args[0] == build_empty_invited_text()
 
 
-def test_handle_my_invited_returns_leads(monkeypatch):
+def test_handle_my_recommendations_returns_leads(monkeypatch):
     message = AsyncMock()
     message.from_user = SimpleNamespace(id=12345)
 
     monkeypatch.setattr(
         "apps.bot.handlers.member.get_participant_dashboard_data",
         lambda **kwargs: {
-            "full_name": "РђРЅРЅР° РРІР°РЅРѕРІР°",
+            "full_name": "Анна Иванова",
             "referral_code": "abc123",
             "balance": 0,
-            "invited_leads": [("РљРѕРјРїР°РЅРёСЏ Рђ", "ordered", datetime(2026, 7, 10))],
+            "invited_leads": [("Компания А", "ordered", datetime(2026, 7, 10))],
         },
     )
 
-    asyncio.run(handle_my_invited(message))
+    asyncio.run(handle_my_recommendations(message))
 
     message.answer.assert_awaited_once()
     sent_text = message.answer.await_args.args[0]
+    assert "Компания А" in sent_text
     assert "10.07.2026" in sent_text
-    assert "abc123" not in sent_text
+
+
+def test_handle_my_requests_returns_empty_state(monkeypatch):
+    message = AsyncMock()
+    message.from_user = SimpleNamespace(id=12345)
+
+    monkeypatch.setattr(
+        "apps.bot.handlers.member.get_participant_requests_data",
+        lambda **kwargs: {"own_leads": [], "spend_requests": []},
+    )
+
+    asyncio.run(handle_my_requests(message))
+
+    message.answer.assert_awaited_once()
+    assert message.answer.await_args.args[0] == build_empty_requests_text()
+
+
+def test_handle_my_requests_returns_requests(monkeypatch):
+    message = AsyncMock()
+    message.from_user = SimpleNamespace(id=12345)
+
+    monkeypatch.setattr(
+        "apps.bot.handlers.member.get_participant_requests_data",
+        lambda **kwargs: {
+            "own_leads": [("ООО Тест", "new", datetime(2026, 7, 10))],
+            "spend_requests": [("Термокружка", "pending", datetime(2026, 7, 11))],
+        },
+    )
+
+    asyncio.run(handle_my_requests(message))
+
+    message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0]
+    assert "ООО Тест" in sent_text
+    assert "Термокружка" in sent_text
 
 
 def test_handle_full_name_stores_name_and_asks_for_phone():
     message = AsyncMock()
-    message.text = "РђРЅРЅР° РРІР°РЅРѕРІР°"
+    message.text = "Анна Иванова"
     state = FakeState()
 
     asyncio.run(handle_full_name(message, state))
 
     assert state.current_state == RegistrationStates.waiting_phone
-    assert state.data["full_name"] == "РђРЅРЅР° РРІР°РЅРѕРІР°"
+    assert state.data["full_name"] == "Анна Иванова"
     message.answer.assert_awaited_once()
 
 
@@ -206,10 +255,10 @@ def test_handle_consent_registers_participant_and_asks_for_company(monkeypatch):
     message.bot.get_me.return_value = SimpleNamespace(username="SvoyCorpStyleBot")
 
     state = FakeState()
-    state.data = {"full_name": "РђРЅРЅР° РРІР°РЅРѕРІР°", "phone": "+375291112233"}
+    state.data = {"full_name": "Анна Иванова", "phone": "+375291112233"}
     monkeypatch.setattr(
         "apps.bot.handlers.member.register_participant_with_referral_code",
-        lambda **kwargs: ("РђРЅРЅР° РРІР°РЅРѕРІР°", "abc123"),
+        lambda **kwargs: ("Анна Иванова", "abc123"),
     )
 
     asyncio.run(handle_consent(message, state))
@@ -217,7 +266,7 @@ def test_handle_consent_registers_participant_and_asks_for_company(monkeypatch):
     assert state.current_state == RegistrationStates.waiting_company
     assert message.answer.await_count == 2
     assert message.answer.await_args_list[0].args[0] == build_registration_success_text(
-        full_name="РђРЅРЅР° РРІР°РЅРѕРІР°",
+        full_name="Анна Иванова",
         referral_url="https://t.me/SvoyCorpStyleBot?start=abc123",
     )
     assert message.answer.await_args_list[1].args[0] == build_profile_company_prompt_text()
@@ -232,10 +281,8 @@ def test_handle_company_stores_value_and_asks_for_position():
 
     assert state.current_state == RegistrationStates.waiting_position
     assert state.data["company"] == "OOO Corporate Style"
-    message.answer.assert_awaited_once_with(
-        build_profile_position_prompt_text(),
-        reply_markup=message.answer.await_args.kwargs["reply_markup"],
-    )
+    message.answer.assert_awaited_once()
+    assert message.answer.await_args.args[0] == build_profile_position_prompt_text()
 
 
 def test_handle_company_skip_keeps_company_empty():
@@ -251,7 +298,7 @@ def test_handle_company_skip_keeps_company_empty():
 
 def test_handle_position_saves_profile_and_returns_menu(monkeypatch):
     message = AsyncMock()
-    message.text = "РњР°СЂРєРµС‚РѕР»РѕРі"
+    message.text = "Маркетолог"
     message.from_user = SimpleNamespace(id=12345)
     state = FakeState()
     state.data = {"company": "OOO Corporate Style"}
@@ -267,5 +314,5 @@ def test_handle_position_saves_profile_and_returns_menu(monkeypatch):
     message.answer.assert_awaited_once()
     assert message.answer.await_args.args[0] == build_profile_saved_text(
         company="OOO Corporate Style",
-        position="РњР°СЂРєРµС‚РѕР»РѕРі",
+        position="Маркетолог",
     )

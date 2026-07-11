@@ -4,13 +4,15 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 from asgiref.sync import sync_to_async
 
-from apps.notifications.telegram import send_admin_notification
 from apps.bot.ui import (
+    MAIN_HELP_BUTTON_TEXT,
     SUPPORT_BUTTON_TEXT,
-    build_member_actions_keyboard,
+    build_help_intro_text,
+    build_help_menu_keyboard,
     build_support_prompt_text,
     build_support_sent_text,
 )
+from apps.notifications.telegram import send_admin_notification
 
 
 router = Router(name="support")
@@ -18,6 +20,14 @@ router = Router(name="support")
 
 class SupportStates(StatesGroup):
     waiting_message = State()
+
+
+@router.message(F.text == MAIN_HELP_BUTTON_TEXT)
+async def open_help_menu(message: Message) -> None:
+    await message.answer(
+        build_help_intro_text(),
+        reply_markup=build_help_menu_keyboard(),
+    )
 
 
 @router.message(F.text == SUPPORT_BUTTON_TEXT)
@@ -45,5 +55,5 @@ async def handle_support_message(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(
         build_support_sent_text(),
-        reply_markup=build_member_actions_keyboard(),
+        reply_markup=build_help_menu_keyboard(),
     )

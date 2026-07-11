@@ -10,7 +10,7 @@ from apps.bot.ui import (
     build_gift_card_text,
     build_gift_request_sent_text,
     build_gifts_intro_text,
-    build_member_actions_keyboard,
+    build_spend_menu_keyboard,
     build_start_keyboard,
 )
 from apps.notifications.telegram import send_admin_notification
@@ -35,7 +35,7 @@ async def handle_gifts_menu(message: Message) -> None:
 
     await message.answer(
         build_gifts_intro_text(),
-        reply_markup=build_member_actions_keyboard(),
+        reply_markup=build_spend_menu_keyboard(),
     )
 
     for index, offer in enumerate(GIFT_OFFERS, start=1):
@@ -98,7 +98,7 @@ async def handle_gift_request(callback: CallbackQuery) -> None:
                 gift_title=offer["title"],
                 gift_amount=offer["amount"],
             ),
-            reply_markup=build_member_actions_keyboard(),
+            reply_markup=build_spend_menu_keyboard(),
         )
 
 

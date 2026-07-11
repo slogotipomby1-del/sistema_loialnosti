@@ -2,7 +2,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from apps.bot.handlers.support import SupportStates, handle_support_message, start_support
+from apps.bot.handlers.support import SupportStates, handle_support_message, open_help_menu, start_support
 
 
 class FakeState:
@@ -18,6 +18,15 @@ class FakeState:
         self.current_state = None
 
 
+def test_open_help_menu_returns_intro():
+    message = AsyncMock()
+
+    asyncio.run(open_help_menu(message))
+
+    message.answer.assert_awaited_once()
+    assert "Помощь и правила" in message.answer.await_args.args[0]
+
+
 def test_start_support_asks_for_message():
     message = AsyncMock()
     state = FakeState()
@@ -26,7 +35,7 @@ def test_start_support_asks_for_message():
 
     assert state.current_state == SupportStates.waiting_message
     message.answer.assert_awaited_once()
-    assert "администратору" in message.answer.await_args.args[0].lower()
+    assert "администратор" in message.answer.await_args.args[0].lower()
 
 
 def test_handle_support_message_sends_notification(monkeypatch):

@@ -1,4 +1,5 @@
-from django.db import models
+from django.core.exceptions import ValidationError
+from django.db import models, transaction
 
 
 class Participant(models.Model):
@@ -17,3 +18,23 @@ class Participant(models.Model):
 
     def __str__(self) -> str:
         return self.full_name
+
+    def clean(self) -> None:
+        self.company = (self.company or "").strip()
+        self.position = (self.position or "").strip()
+
+        if self.is_primary_contact and not self.company:
+            raise ValidationError({"company": "Нельзя назначить основного контакта без компании."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+
+            if self.is_primary_contact and self.company:
+                (
+                    Participant.objects.filter(company=self.company, is_primary_contact=True)
+                    .exclude(pk=self.pk)
+                    .update(is_primary_contact=False)
+                )

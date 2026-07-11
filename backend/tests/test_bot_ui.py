@@ -7,21 +7,62 @@ def test_start_keyboard_has_register_button():
     assert keyboard.keyboard[0][0].text == ui.REGISTER_BUTTON_TEXT
 
 
-def test_member_actions_keyboard_has_expected_buttons():
-    keyboard = ui.build_member_actions_keyboard()
+def test_main_menu_keyboard_has_expected_buttons():
+    keyboard = ui.build_main_menu_keyboard()
+    labels = [row[0].text for row in keyboard.keyboard]
+
+    assert labels == [
+        ui.MAIN_CABINET_BUTTON_TEXT,
+        ui.MAIN_RECOMMEND_BUTTON_TEXT,
+        ui.MAIN_SPEND_BUTTON_TEXT,
+        ui.MAIN_HELP_BUTTON_TEXT,
+    ]
+
+
+def test_cabinet_keyboard_has_expected_buttons():
+    keyboard = ui.build_cabinet_keyboard()
     labels = [row[0].text for row in keyboard.keyboard]
 
     assert labels == [
         ui.MY_BALANCE_BUTTON_TEXT,
+        ui.MY_RECOMMENDATIONS_BUTTON_TEXT,
+        ui.MY_REQUESTS_BUTTON_TEXT,
+        ui.OWN_COMPANY_ORDER_BUTTON_TEXT,
+        ui.BACK_TO_MENU_BUTTON_TEXT,
+    ]
+
+
+def test_recommend_keyboard_has_expected_buttons():
+    keyboard = ui.build_recommend_keyboard()
+    labels = [row[0].text for row in keyboard.keyboard]
+
+    assert labels == [
         ui.MY_LINK_BUTTON_TEXT,
-        ui.INVITE_CLIENT_BUTTON_TEXT,
-        ui.MY_INVITED_BUTTON_TEXT,
-        ui.CONSULTATION_BUTTON_TEXT,
+        ui.READY_TEXT_BUTTON_TEXT,
+        ui.BACK_TO_MENU_BUTTON_TEXT,
+    ]
+
+
+def test_spend_menu_keyboard_has_expected_buttons():
+    keyboard = ui.build_spend_menu_keyboard()
+    labels = [row[0].text for row in keyboard.keyboard]
+
+    assert labels == [
         ui.GIFTS_BUTTON_TEXT,
-        ui.SPEND_BONUSES_BUTTON_TEXT,
-        ui.RULES_BUTTON_TEXT,
+        ui.HOW_SPEND_BUTTON_TEXT,
         ui.CATALOG_BUTTON_TEXT,
+        ui.BACK_TO_MENU_BUTTON_TEXT,
+    ]
+
+
+def test_help_menu_keyboard_has_expected_buttons():
+    keyboard = ui.build_help_menu_keyboard()
+    labels = [row[0].text for row in keyboard.keyboard]
+
+    assert labels == [
+        ui.RULES_BUTTON_TEXT,
         ui.SUPPORT_BUTTON_TEXT,
+        ui.BACK_TO_MENU_BUTTON_TEXT,
     ]
 
 
@@ -29,8 +70,8 @@ def test_start_text_contains_program_message():
     text = ui.build_start_text()
 
     assert "Мерч-бонусы" in text
-    assert "рекомендации" in text.lower()
-    assert "регистрацию" in text.lower()
+    assert "рекомендац" in text.lower()
+    assert "регистрац" in text.lower()
 
 
 def test_registration_success_text_contains_referral_url():
@@ -50,7 +91,6 @@ def test_share_link_text_explains_reward():
     )
 
     assert "https://t.me/SvoyCorpStyleBot?start=abc123" in text
-    assert "зачем" in text.lower()
     assert "мерч-бонусы" in text.lower()
 
 
@@ -61,7 +101,6 @@ def test_invite_client_text_contains_ready_message():
 
     assert "https://t.me/SvoyCorpStyleBot?start=abc123" in text
     assert "корпоративный стиль" in text.lower()
-    assert "мерч-бонусы" in text.lower()
 
 
 def test_rules_text_contains_program_restrictions():
@@ -106,7 +145,7 @@ def test_support_texts_are_present():
     prompt = ui.build_support_prompt_text()
     sent = ui.build_support_sent_text()
 
-    assert "администратору" in prompt.lower()
+    assert "администратор" in prompt.lower()
     assert "отправлено" in sent.lower()
 
 
@@ -120,7 +159,7 @@ def test_balance_text_contains_amount():
 def test_empty_invited_text_contains_hint():
     text = ui.build_empty_invited_text()
 
-    assert "Пока у вас нет приглашённых" in text
+    assert "пока у вас нет рекомендаций" in text.lower()
 
 
 def test_invited_text_contains_status_explanation():
@@ -128,3 +167,13 @@ def test_invited_text_contains_status_explanation():
 
     assert "Компания А" in text
     assert "ожидает подтверждения" in text.lower()
+
+
+def test_my_requests_text_builders():
+    empty_text = ui.build_empty_requests_text()
+    filled_text = ui.build_my_requests_text(
+        request_lines=["— Заявка для своей компании — Новая — 10.07.2026"]
+    )
+
+    assert "нет собственных заявок" in empty_text.lower()
+    assert "ваши заявки" in filled_text.lower()

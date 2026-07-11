@@ -3,16 +3,27 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardBu
 SITE_URL = "https://slogotipom.by/"
 
 REGISTER_BUTTON_TEXT = "Зарегистрироваться"
+MAIN_CABINET_BUTTON_TEXT = "Мой кабинет"
+MAIN_RECOMMEND_BUTTON_TEXT = "Рекомендовать компанию"
+MAIN_SPEND_BUTTON_TEXT = "Потратить бонусы"
+MAIN_HELP_BUTTON_TEXT = "Помощь и правила"
+
 MY_BALANCE_BUTTON_TEXT = "Мой баланс"
+MY_RECOMMENDATIONS_BUTTON_TEXT = "Мои рекомендации"
+MY_REQUESTS_BUTTON_TEXT = "Мои заявки"
+OWN_COMPANY_ORDER_BUTTON_TEXT = "Заказать для своей компании"
+
 MY_LINK_BUTTON_TEXT = "Моя ссылка"
-INVITE_CLIENT_BUTTON_TEXT = "Пригласить клиента"
-MY_INVITED_BUTTON_TEXT = "Мои приглашённые"
-CONSULTATION_BUTTON_TEXT = "Получить консультацию"
+READY_TEXT_BUTTON_TEXT = "Готовый текст для отправки"
+
 GIFTS_BUTTON_TEXT = "Подарки за бонусы"
-SPEND_BONUSES_BUTTON_TEXT = "Как потратить бонусы"
-RULES_BUTTON_TEXT = "Правила программы"
+HOW_SPEND_BUTTON_TEXT = "Как потратить бонусы"
 CATALOG_BUTTON_TEXT = "Каталог / идеи подарков"
-SUPPORT_BUTTON_TEXT = "Связь с администратором"
+
+RULES_BUTTON_TEXT = "Правила программы"
+SUPPORT_BUTTON_TEXT = "Написать администратору"
+
+BACK_TO_MENU_BUTTON_TEXT = "Назад в меню"
 SEND_PHONE_BUTTON_TEXT = "Отправить телефон"
 CONSENT_BUTTON_TEXT = "Согласен(на)"
 SKIP_BUTTON_TEXT = "Пропустить"
@@ -20,8 +31,9 @@ SKIP_BUTTON_TEXT = "Пропустить"
 
 def build_start_text() -> str:
     return (
-        "Добро пожаловать в программу «Мерч-бонусы» 🎁\n\n"
-        "Здесь вы можете получать бонусы за заказы и рекомендации «Корпоративного стиля».\n"
+        "Добро пожаловать в программу «Мерч-бонусы».\n\n"
+        "Здесь вы можете получать бонусы за свои заказы и рекомендации для компании "
+        "«Корпоративный стиль».\n"
         "Бонусы можно использовать на подарки, доставку, нанесение или часть следующего заказа.\n\n"
         "Чтобы начать, нужно пройти короткую регистрацию."
     )
@@ -34,19 +46,64 @@ def build_start_keyboard() -> ReplyKeyboardMarkup:
     )
 
 
+def build_main_menu_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=MAIN_CABINET_BUTTON_TEXT)],
+            [KeyboardButton(text=MAIN_RECOMMEND_BUTTON_TEXT)],
+            [KeyboardButton(text=MAIN_SPEND_BUTTON_TEXT)],
+            [KeyboardButton(text=MAIN_HELP_BUTTON_TEXT)],
+        ],
+        resize_keyboard=True,
+    )
+
+
 def build_member_actions_keyboard() -> ReplyKeyboardMarkup:
+    return build_main_menu_keyboard()
+
+
+def build_cabinet_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=MY_BALANCE_BUTTON_TEXT)],
+            [KeyboardButton(text=MY_RECOMMENDATIONS_BUTTON_TEXT)],
+            [KeyboardButton(text=MY_REQUESTS_BUTTON_TEXT)],
+            [KeyboardButton(text=OWN_COMPANY_ORDER_BUTTON_TEXT)],
+            [KeyboardButton(text=BACK_TO_MENU_BUTTON_TEXT)],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def build_recommend_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
             [KeyboardButton(text=MY_LINK_BUTTON_TEXT)],
-            [KeyboardButton(text=INVITE_CLIENT_BUTTON_TEXT)],
-            [KeyboardButton(text=MY_INVITED_BUTTON_TEXT)],
-            [KeyboardButton(text=CONSULTATION_BUTTON_TEXT)],
+            [KeyboardButton(text=READY_TEXT_BUTTON_TEXT)],
+            [KeyboardButton(text=BACK_TO_MENU_BUTTON_TEXT)],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def build_spend_menu_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
             [KeyboardButton(text=GIFTS_BUTTON_TEXT)],
-            [KeyboardButton(text=SPEND_BONUSES_BUTTON_TEXT)],
-            [KeyboardButton(text=RULES_BUTTON_TEXT)],
+            [KeyboardButton(text=HOW_SPEND_BUTTON_TEXT)],
             [KeyboardButton(text=CATALOG_BUTTON_TEXT)],
+            [KeyboardButton(text=BACK_TO_MENU_BUTTON_TEXT)],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def build_help_menu_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=RULES_BUTTON_TEXT)],
             [KeyboardButton(text=SUPPORT_BUTTON_TEXT)],
+            [KeyboardButton(text=BACK_TO_MENU_BUTTON_TEXT)],
         ],
         resize_keyboard=True,
     )
@@ -76,9 +133,25 @@ def build_skip_keyboard() -> ReplyKeyboardMarkup:
     )
 
 
+def build_cabinet_intro_text() -> str:
+    return "Раздел «Мой кабинет». Здесь ваш баланс, рекомендации и собственные заявки."
+
+
+def build_recommend_intro_text() -> str:
+    return "Раздел «Рекомендовать компанию». Здесь ваша ссылка и готовый текст для отправки клиенту."
+
+
+def build_spend_intro_text() -> str:
+    return "Раздел «Потратить бонусы». Здесь подарки, правила списания и идеи продукции."
+
+
+def build_help_intro_text() -> str:
+    return "Раздел «Помощь и правила». Здесь правила программы и связь с администратором."
+
+
 def build_registration_success_text(*, full_name: str, referral_url: str) -> str:
     return (
-        f"Готово! {full_name}, вы зарегистрированы в программе «Мерч-бонусы» 🎁\n\n"
+        f"Готово! {full_name}, вы зарегистрированы в программе «Мерч-бонусы».\n\n"
         "Ваша персональная ссылка уже создана:\n"
         f"{referral_url}\n\n"
         "Делитесь ею с компаниями, которым могут быть нужны корпоративные подарки, мерч, "
@@ -111,8 +184,7 @@ def build_profile_saved_text(*, company: str, position: str) -> str:
 def build_member_start_text(*, full_name: str) -> str:
     return (
         f"{full_name}, рады снова видеть вас в программе «Мерч-бонусы».\n\n"
-        "Здесь вы можете посмотреть свою ссылку, пригласить клиента, изучить правила программы "
-        "и оставить заявку для себя."
+        "Выберите нужный раздел в меню."
     )
 
 
@@ -120,20 +192,8 @@ def build_share_link_text(*, full_name: str, referral_url: str) -> str:
     return (
         f"{full_name}, ваша персональная ссылка:\n"
         f"{referral_url}\n\n"
-        "Зачем ей делиться:\n"
-        "— чтобы приглашать новые компании в «Корпоративный стиль»;\n"
-        "— чтобы фиксировать рекомендацию именно за вами;\n"
-        "— чтобы получать мерч-бонусы за успешные рекомендации.\n\n"
-        "Что вы получите:\n"
-        "Если человек перейдёт по вашей ссылке, оставит заявку и сделает заказ, "
-        "вам начислятся мерч-бонусы после оплаты, отгрузки и подтверждения заказа администратором.\n\n"
-        "Кому можно отправить ссылку:\n"
-        "— знакомым маркетологам;\n"
-        "— HR;\n"
-        "— руководителям;\n"
-        "— закупщикам;\n"
-        "— партнёрам;\n"
-        "— компаниям, которым могут быть нужны корпоративные подарки, мерч или нанесение логотипа."
+        "Делитесь ею с новыми компаниями, чтобы фиксировать рекомендацию именно за вами и получать "
+        "мерч-бонусы по правилам программы."
     )
 
 
@@ -146,9 +206,7 @@ def build_invite_client_text(*, referral_url: str) -> str:
         "Можно обратиться, если нужны подарки сотрудникам, клиентам, партнёрам, welcome pack, "
         "мерч для мероприятий или сезонные корпоративные заказы.\n"
         "Заявку удобно оставить здесь:\n"
-        f"{referral_url}\n\n"
-        "Если по вашей рекомендации клиент сделает заказ, вам могут быть начислены мерч-бонусы "
-        "по правилам программы."
+        f"{referral_url}"
     )
 
 
@@ -259,7 +317,7 @@ def build_balance_text(*, balance: str) -> str:
 
 def build_empty_invited_text() -> str:
     return (
-        "Пока у вас нет приглашённых клиентов.\n"
+        "Пока у вас нет рекомендаций.\n"
         "Отправьте вашу персональную ссылку тем, кому могут быть нужны корпоративные подарки, "
         "мерч или нанесение логотипа."
     )
@@ -268,8 +326,17 @@ def build_empty_invited_text() -> str:
 def build_invited_text(*, invited_lines: list[str]) -> str:
     invited_block = "\n".join(invited_lines)
     return (
-        "Ваши приглашённые:\n"
+        "Ваши рекомендации:\n"
         f"{invited_block}\n\n"
         "Статус «ожидает подтверждения» означает, что заявка уже зафиксирована, "
         "но бонусы ещё не подтверждены администратором."
     )
+
+
+def build_empty_requests_text() -> str:
+    return "Пока у вас нет собственных заявок."
+
+
+def build_my_requests_text(*, request_lines: list[str]) -> str:
+    request_block = "\n".join(request_lines)
+    return f"Ваши заявки:\n{request_block}"

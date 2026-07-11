@@ -6,7 +6,7 @@ from asgiref.sync import sync_to_async
 
 from apps.bot.services import get_participant_referral_data
 from apps.bot.ui import (
-    build_member_actions_keyboard,
+    build_main_menu_keyboard,
     build_member_start_text,
     build_start_keyboard,
     build_start_text,
@@ -29,7 +29,7 @@ async def handle_start(message: Message, state: FSMContext) -> None:
         full_name, _ = participant_data
         await message.answer(
             build_member_start_text(full_name=full_name),
-            reply_markup=build_member_actions_keyboard(),
+            reply_markup=build_main_menu_keyboard(),
         )
         return
 

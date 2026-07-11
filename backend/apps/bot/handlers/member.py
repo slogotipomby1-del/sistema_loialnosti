@@ -7,30 +7,44 @@ from asgiref.sync import sync_to_async
 from apps.bot.services import (
     get_participant_dashboard_data,
     get_participant_referral_data,
+    get_participant_requests_data,
     register_participant_with_referral_code,
     update_participant_profile,
 )
 from apps.bot.ui import (
+    BACK_TO_MENU_BUTTON_TEXT,
     CONSENT_BUTTON_TEXT,
-    INVITE_CLIENT_BUTTON_TEXT,
+    MAIN_CABINET_BUTTON_TEXT,
+    MAIN_RECOMMEND_BUTTON_TEXT,
     MY_BALANCE_BUTTON_TEXT,
-    MY_INVITED_BUTTON_TEXT,
     MY_LINK_BUTTON_TEXT,
+    MY_RECOMMENDATIONS_BUTTON_TEXT,
+    MY_REQUESTS_BUTTON_TEXT,
+    READY_TEXT_BUTTON_TEXT,
     REGISTER_BUTTON_TEXT,
     SKIP_BUTTON_TEXT,
     build_balance_text,
+    build_cabinet_intro_text,
+    build_cabinet_keyboard,
     build_consent_keyboard,
     build_empty_invited_text,
+    build_empty_requests_text,
+    build_help_menu_keyboard,
     build_invite_client_text,
     build_invited_text,
+    build_main_menu_keyboard,
     build_member_actions_keyboard,
+    build_my_requests_text,
     build_phone_keyboard,
     build_profile_company_prompt_text,
     build_profile_position_prompt_text,
     build_profile_saved_text,
+    build_recommend_intro_text,
+    build_recommend_keyboard,
     build_registration_success_text,
     build_share_link_text,
     build_skip_keyboard,
+    build_spend_menu_keyboard,
     build_start_keyboard,
 )
 
@@ -57,6 +71,30 @@ async def start_registration(message: Message, state: FSMContext) -> None:
     await message.answer("Как вас зовут?")
 
 
+@router.message(F.text == MAIN_CABINET_BUTTON_TEXT)
+async def open_cabinet_menu(message: Message) -> None:
+    await message.answer(
+        build_cabinet_intro_text(),
+        reply_markup=build_cabinet_keyboard(),
+    )
+
+
+@router.message(F.text == MAIN_RECOMMEND_BUTTON_TEXT)
+async def open_recommend_menu(message: Message) -> None:
+    await message.answer(
+        build_recommend_intro_text(),
+        reply_markup=build_recommend_keyboard(),
+    )
+
+
+@router.message(F.text == BACK_TO_MENU_BUTTON_TEXT)
+async def back_to_main_menu(message: Message) -> None:
+    await message.answer(
+        "Главное меню.",
+        reply_markup=build_main_menu_keyboard(),
+    )
+
+
 @router.message(F.text == MY_LINK_BUTTON_TEXT)
 async def handle_share_link(message: Message) -> None:
     participant_data = await sync_to_async(get_participant_referral_data, thread_sensitive=True)(
@@ -74,11 +112,11 @@ async def handle_share_link(message: Message) -> None:
     referral_url = await build_referral_url(message, referral_code)
     await message.answer(
         build_share_link_text(full_name=full_name, referral_url=referral_url),
-        reply_markup=build_member_actions_keyboard(),
+        reply_markup=build_recommend_keyboard(),
     )
 
 
-@router.message(F.text == INVITE_CLIENT_BUTTON_TEXT)
+@router.message(F.text == READY_TEXT_BUTTON_TEXT)
 async def handle_invite_client(message: Message) -> None:
     participant_data = await sync_to_async(get_participant_referral_data, thread_sensitive=True)(
         telegram_id=str(message.from_user.id)
@@ -95,7 +133,7 @@ async def handle_invite_client(message: Message) -> None:
     referral_url = await build_referral_url(message, referral_code)
     await message.answer(
         build_invite_client_text(referral_url=referral_url),
-        reply_markup=build_member_actions_keyboard(),
+        reply_markup=build_recommend_keyboard(),
     )
 
 
@@ -115,19 +153,19 @@ async def handle_my_balance(message: Message) -> None:
     balance = f"{dashboard_data['balance']:.2f}"
     await message.answer(
         build_balance_text(balance=balance),
-        reply_markup=build_member_actions_keyboard(),
+        reply_markup=build_cabinet_keyboard(),
     )
 
 
-@router.message(F.text == MY_INVITED_BUTTON_TEXT)
-async def handle_my_invited(message: Message) -> None:
+@router.message(F.text == MY_RECOMMENDATIONS_BUTTON_TEXT)
+async def handle_my_recommendations(message: Message) -> None:
     dashboard_data = await sync_to_async(get_participant_dashboard_data, thread_sensitive=True)(
         telegram_id=str(message.from_user.id)
     )
 
     if not dashboard_data:
         await message.answer(
-            "Сначала нужно зарегистрироваться, чтобы смотреть приглашённых.",
+            "Сначала нужно зарегистрироваться, чтобы смотреть рекомендации.",
             reply_markup=build_start_keyboard(),
         )
         return
@@ -136,7 +174,7 @@ async def handle_my_invited(message: Message) -> None:
     if not invited_leads:
         await message.answer(
             build_empty_invited_text(),
-            reply_markup=build_member_actions_keyboard(),
+            reply_markup=build_cabinet_keyboard(),
         )
         return
 
@@ -153,7 +191,56 @@ async def handle_my_invited(message: Message) -> None:
     ]
     await message.answer(
         build_invited_text(invited_lines=invited_lines),
-        reply_markup=build_member_actions_keyboard(),
+        reply_markup=build_cabinet_keyboard(),
+    )
+
+
+@router.message(F.text == MY_REQUESTS_BUTTON_TEXT)
+async def handle_my_requests(message: Message) -> None:
+    requests_data = await sync_to_async(get_participant_requests_data, thread_sensitive=True)(
+        telegram_id=str(message.from_user.id)
+    )
+
+    if not requests_data:
+        await message.answer(
+            "Сначала нужно зарегистрироваться, чтобы смотреть заявки.",
+            reply_markup=build_start_keyboard(),
+        )
+        return
+
+    status_map = {
+        "new": "Новая",
+        "in_progress": "В работе",
+        "ordered": "Ожидает подтверждения",
+        "bonus_confirmed": "Бонус подтверждён",
+        "rejected": "Отклонена",
+        "pending": "На рассмотрении",
+        "approved": "Подтверждена",
+    }
+    request_lines = []
+
+    for company, status, created_at in requests_data["own_leads"]:
+        company_name = company or "без компании"
+        request_lines.append(
+            f"— Заявка для своей компании: {company_name} — {status_map.get(status, status)} — {created_at:%d.%m.%Y}"
+        )
+
+    for comment, status, created_at in requests_data["spend_requests"]:
+        title = comment or "списание бонусов"
+        request_lines.append(
+            f"— Запрос на подарок: {title} — {status_map.get(status, status)} — {created_at:%d.%m.%Y}"
+        )
+
+    if not request_lines:
+        await message.answer(
+            build_empty_requests_text(),
+            reply_markup=build_cabinet_keyboard(),
+        )
+        return
+
+    await message.answer(
+        build_my_requests_text(request_lines=request_lines),
+        reply_markup=build_cabinet_keyboard(),
     )
 
 

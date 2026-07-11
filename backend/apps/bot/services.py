@@ -88,6 +88,32 @@ def get_participant_dashboard_data(*, telegram_id: str):
     }
 
 
+def get_participant_requests_data(*, telegram_id: str):
+    participant = Participant.objects.filter(telegram_id=telegram_id).first()
+    if not participant:
+        return None
+
+    own_leads = list(
+        ReferralLead.objects.filter(
+            referral_link__isnull=True,
+            client_name=participant.full_name,
+            client_phone=participant.phone,
+        )
+        .order_by("-created_at")
+        .values_list("client_company", "status", "created_at")
+    )
+    spend_requests = list(
+        BonusSpendRequest.objects.filter(participant=participant)
+        .order_by("-created_at")
+        .values_list("comment", "status", "created_at")
+    )
+
+    return {
+        "own_leads": own_leads,
+        "spend_requests": spend_requests,
+    }
+
+
 def create_referral_lead(
     *,
     referral_code: str | None,
