@@ -1,43 +1,44 @@
 GIFT_OFFERS = [
     {
-        "slug": "mug",
-        "title": "Термокружка с логотипом",
-        "amount": 60,
-        "description": "Практичный подарок для сотрудников, партнёров и клиентов.",
-    },
-    {
-        "slug": "notebook",
-        "title": "Блокнот + ручка в фирменном стиле",
-        "amount": 80,
-        "description": "Универсальный набор для welcome pack и деловых встреч.",
-    },
-    {
-        "slug": "hoodie",
-        "title": "Худи с брендированием",
-        "amount": 150,
-        "description": "Подходит для команды, ивентов и корпоративного мерча.",
-    },
-    {
-        "slug": "gift_box",
-        "title": "Подарочный набор для клиента",
+        "slug": "backpack",
+        "title": "Рюкзак",
         "amount": 180,
-        "description": "Готовая идея для поздравления, встречи или благодарности.",
+        "description": "Функциональный подарок для сотрудников, партнёров и корпоративных наборов.",
+        "is_available": True,
+    },
+    {
+        "slug": "mug",
+        "title": "Термокружка",
+        "amount": 60,
+        "description": "Практичный подарок с логотипом для офиса, встреч и повседневного использования.",
+        "is_available": True,
     },
     {
         "slug": "delivery",
-        "title": "Оплата доставки бонусами",
+        "title": "Доставка",
         "amount": 40,
         "description": "Можно использовать бонусы на доставку по вашему заказу.",
+        "is_available": True,
+    },
+    {
+        "slug": "soon_1",
+        "title": "Скоро добавим",
+        "amount": 0,
+        "description": "Здесь появится следующий подарок, когда вы утвердите новые позиции.",
+        "is_available": False,
+    },
+    {
+        "slug": "soon_2",
+        "title": "Скоро добавим",
+        "amount": 0,
+        "description": "Оставили место под будущую карточку с изображением и кнопкой выбора.",
+        "is_available": False,
     },
 ]
 
 
-def build_gift_button_text(offer: dict) -> str:
-    return f"{offer['title']} — {offer['amount']} бонусов"
-
-
-def get_gift_offer_by_button(button_text: str) -> dict | None:
+def get_gift_offer(slug: str) -> dict | None:
     for offer in GIFT_OFFERS:
-        if build_gift_button_text(offer) == button_text:
+        if offer["slug"] == slug:
             return offer
     return None

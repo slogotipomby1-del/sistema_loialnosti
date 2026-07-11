@@ -1,7 +1,4 @@
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
-
-from apps.bot.gifts import GIFT_OFFERS, build_gift_button_text
-
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 
 SITE_URL = "https://slogotipom.by/"
 
@@ -18,7 +15,6 @@ CATALOG_BUTTON_TEXT = "Каталог / идеи подарков"
 SUPPORT_BUTTON_TEXT = "Связь с администратором"
 SEND_PHONE_BUTTON_TEXT = "Отправить телефон"
 CONSENT_BUTTON_TEXT = "Согласен(на)"
-BACK_TO_MENU_BUTTON_TEXT = "Назад в меню"
 
 
 def build_start_text() -> str:
@@ -171,30 +167,41 @@ def build_catalog_text() -> str:
     )
 
 
-def build_gifts_keyboard() -> ReplyKeyboardMarkup:
-    keyboard = [[KeyboardButton(text=build_gift_button_text(offer))] for offer in GIFT_OFFERS]
-    keyboard.append([KeyboardButton(text=BACK_TO_MENU_BUTTON_TEXT)])
-    return ReplyKeyboardMarkup(
-        keyboard=keyboard,
-        resize_keyboard=True,
-    )
-
-
 def build_gifts_intro_text() -> str:
-    lines = [
-        "Подарки, которые можно запросить за мерч-бонусы:",
-        "",
-    ]
-    for offer in GIFT_OFFERS:
-        lines.append(f"— {offer['title']} — {offer['amount']} бонусов")
-        lines.append(f"  {offer['description']}")
-    lines.extend(
-        [
-            "",
-            "Нажмите на нужный вариант — и мы создадим заявку в админке.",
-        ]
+    return (
+        "Ниже — 5 карточек подарков за мерч-бонусы.\n\n"
+        "Пока показываем каталог без изображений. Позже сюда добавим фото для каждой позиции.\n"
+        "Если нажмёте на кнопку под карточкой, заявка сразу уйдёт администратору."
     )
-    return "\n".join(lines)
+
+
+def build_gift_card_text(*, index: int, title: str, description: str, amount: int, is_available: bool) -> str:
+    if is_available:
+        price_line = f"Стоимость: {amount} бонусов"
+    else:
+        price_line = "Скоро появится"
+
+    return (
+        f"Подарок {index}/5\n"
+        f"{title}\n\n"
+        f"{description}\n\n"
+        f"{price_line}"
+    )
+
+
+def build_gift_card_keyboard(*, slug: str, is_available: bool) -> InlineKeyboardMarkup:
+    if is_available:
+        button = InlineKeyboardButton(
+            text="Хочу этот подарок",
+            callback_data=f"gift:choose:{slug}",
+        )
+    else:
+        button = InlineKeyboardButton(
+            text="Скоро добавим",
+            callback_data=f"gift:soon:{slug}",
+        )
+
+    return InlineKeyboardMarkup(inline_keyboard=[[button]])
 
 
 def build_gift_request_sent_text(*, gift_title: str, gift_amount: int) -> str:

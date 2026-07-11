@@ -1,15 +1,15 @@
 from aiogram import F, Router
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 from asgiref.sync import sync_to_async
 
-from apps.bot.gifts import GIFT_OFFERS, build_gift_button_text, get_gift_offer_by_button
+from apps.bot.gifts import GIFT_OFFERS, get_gift_offer
 from apps.bot.services import create_bonus_spend_request, get_participant_by_telegram_id
 from apps.bot.ui import (
-    BACK_TO_MENU_BUTTON_TEXT,
     GIFTS_BUTTON_TEXT,
+    build_gift_card_keyboard,
+    build_gift_card_text,
     build_gift_request_sent_text,
     build_gifts_intro_text,
-    build_gifts_keyboard,
     build_member_actions_keyboard,
     build_start_keyboard,
 )
@@ -35,38 +35,45 @@ async def handle_gifts_menu(message: Message) -> None:
 
     await message.answer(
         build_gifts_intro_text(),
-        reply_markup=build_gifts_keyboard(),
-    )
-
-
-@router.message(F.text == BACK_TO_MENU_BUTTON_TEXT)
-async def handle_back_to_menu(message: Message) -> None:
-    await message.answer(
-        "Возвращаю вас в главное меню.",
         reply_markup=build_member_actions_keyboard(),
     )
 
+    for index, offer in enumerate(GIFT_OFFERS, start=1):
+        await message.answer(
+            build_gift_card_text(
+                index=index,
+                title=offer["title"],
+                description=offer["description"],
+                amount=offer["amount"],
+                is_available=offer["is_available"],
+            ),
+            reply_markup=build_gift_card_keyboard(
+                slug=offer["slug"],
+                is_available=offer["is_available"],
+            ),
+        )
 
-@router.message(F.text.in_([build_gift_button_text(offer) for offer in GIFT_OFFERS]))
-async def handle_gift_request(message: Message) -> None:
+
+@router.callback_query(F.data.startswith("gift:choose:"))
+async def handle_gift_request(callback: CallbackQuery) -> None:
     participant = await sync_to_async(
         get_participant_by_telegram_id,
         thread_sensitive=True,
-    )(telegram_id=str(message.from_user.id))
+    )(telegram_id=str(callback.from_user.id))
 
     if not participant:
-        await message.answer(
-            "Сначала нужно зарегистрироваться, чтобы заказывать подарки за бонусы.",
-            reply_markup=build_start_keyboard(),
-        )
+        await callback.answer("Сначала нужно зарегистрироваться.", show_alert=True)
+        if callback.message:
+            await callback.message.answer(
+                "Сначала нужно зарегистрироваться, чтобы заказывать подарки за бонусы.",
+                reply_markup=build_start_keyboard(),
+            )
         return
 
-    offer = get_gift_offer_by_button(message.text or "")
-    if not offer:
-        await message.answer(
-            "Не смог понять, какой подарок вы выбрали. Попробуйте ещё раз.",
-            reply_markup=build_gifts_keyboard(),
-        )
+    slug = callback.data.split(":")[-1]
+    offer = get_gift_offer(slug)
+    if not offer or not offer["is_available"]:
+        await callback.answer("Этот подарок пока недоступен.", show_alert=True)
         return
 
     await sync_to_async(
@@ -84,10 +91,17 @@ async def handle_gift_request(message: Message) -> None:
         f"Подарок: {offer['title']}\n"
         f"Сумма: {offer['amount']} бонусов"
     )
-    await message.answer(
-        build_gift_request_sent_text(
-            gift_title=offer["title"],
-            gift_amount=offer["amount"],
-        ),
-        reply_markup=build_member_actions_keyboard(),
-    )
+    await callback.answer("Заявка отправлена")
+    if callback.message:
+        await callback.message.answer(
+            build_gift_request_sent_text(
+                gift_title=offer["title"],
+                gift_amount=offer["amount"],
+            ),
+            reply_markup=build_member_actions_keyboard(),
+        )
+
+
+@router.callback_query(F.data.startswith("gift:soon:"))
+async def handle_soon_gift(callback: CallbackQuery) -> None:
+    await callback.answer("Эта позиция пока в разработке.", show_alert=True)

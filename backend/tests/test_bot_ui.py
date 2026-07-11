@@ -85,14 +85,21 @@ def test_spend_bonuses_text_contains_limits():
     assert "200 byn" in text.lower()
 
 
-def test_gifts_text_and_keyboard_contain_gift_options():
+def test_gifts_text_and_card_builders_contain_gift_options():
     text = ui.build_gifts_intro_text()
-    keyboard = ui.build_gifts_keyboard()
+    card_text = ui.build_gift_card_text(
+        index=1,
+        title="Рюкзак",
+        description="Тестовое описание",
+        amount=180,
+        is_available=True,
+    )
+    keyboard = ui.build_gift_card_keyboard(slug="backpack", is_available=True)
 
-    assert "Термокружка" in text
-    assert "Худи" in text
-    labels = [row[0].text for row in keyboard.keyboard]
-    assert ui.BACK_TO_MENU_BUTTON_TEXT in labels
+    assert "5 карточек" in text
+    assert "Рюкзак" in card_text
+    assert "180" in card_text
+    assert keyboard.inline_keyboard[0][0].text == "Хочу этот подарок"
 
 
 def test_support_texts_are_present():
