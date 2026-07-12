@@ -1,0 +1,29 @@
+{% extends "admin/change_form.html" %}
+
+{% block content %}
+  {% if admin_memo %}
+    <div data-testid="admin-change-memo-card" style="margin-bottom: 20px; padding: 16px 18px; border: 1px solid #cfe2f3; border-radius: 12px; background: linear-gradient(180deg, #f7fbff 0%, #eef7ff 100%); box-shadow: 0 1px 2px rgba(23, 43, 77, 0.08);">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+        <div style="width: 34px; height: 34px; border-radius: 999px; background: #2f6f8f; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+          ✓
+        </div>
+        <div>
+          <h2 style="margin: 0; font-size: 20px;">{{ admin_memo.title }}</h2>
+          <p style="margin: 4px 0 0; color: #35566b;">{{ admin_memo.intro }}</p>
+        </div>
+      </div>
+
+      <ul style="margin: 0 0 10px 20px; padding: 0;">
+        {% for item in admin_memo.items %}
+          <li style="margin-bottom: 6px;">{{ item }}</li>
+        {% endfor %}
+      </ul>
+
+      {% if admin_memo.note %}
+        <p style="margin: 0; font-weight: 600; color: #20485f;">{{ admin_memo.note }}</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {{ block.super }}
+{% endblock %}

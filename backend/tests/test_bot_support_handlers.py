@@ -24,7 +24,9 @@ def test_open_help_menu_returns_intro():
     asyncio.run(open_help_menu(message))
 
     message.answer.assert_awaited_once()
-    assert "Помощь и правила" in message.answer.await_args.args[0]
+    sent_text = message.answer.await_args.args[0].lower()
+    assert "правила" in sent_text
+    assert "администратор" in sent_text
 
 
 def test_start_support_asks_for_message():

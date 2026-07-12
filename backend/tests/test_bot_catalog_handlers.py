@@ -15,7 +15,9 @@ def test_open_spend_menu_returns_intro():
     asyncio.run(open_spend_menu(message))
 
     message.answer.assert_awaited_once()
-    assert "Потратить бонусы" in message.answer.await_args.args[0]
+    sent_text = message.answer.await_args.args[0].lower()
+    assert "подарки" in sent_text
+    assert "списания" in sent_text
 
 
 def test_handle_catalog_returns_site_and_ideas():
