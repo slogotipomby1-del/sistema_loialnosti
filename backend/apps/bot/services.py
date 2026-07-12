@@ -2,6 +2,7 @@ import secrets
 from decimal import Decimal
 
 from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
+from apps.common.choices import SPEND_REQUEST_STATUS_PENDING
 from apps.notifications import telegram as telegram_notifications
 from apps.referrals.models import ReferralLead, ReferralLink
 from apps.users.models import Participant
@@ -68,7 +69,7 @@ def get_participant_dashboard_data(*, telegram_id: str):
     accrued = BonusLedgerEntry.objects.filter(participant=participant).values_list("amount", flat=True)
     spent = BonusSpendRequest.objects.filter(
         participant=participant,
-        status="pending",
+        status=SPEND_REQUEST_STATUS_PENDING,
     ).values_list("amount", flat=True)
 
     balance = sum(accrued, Decimal("0.00")) - sum(spent, Decimal("0.00"))
@@ -140,7 +141,7 @@ def create_bonus_spend_request(*, participant, amount: Decimal, comment: str = "
         participant=participant,
         amount=amount,
         comment=comment,
-        status="pending",
+        status=SPEND_REQUEST_STATUS_PENDING,
     )
 
 

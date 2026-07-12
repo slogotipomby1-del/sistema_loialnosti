@@ -1,5 +1,9 @@
 from django.db import models
 
+from apps.common.choices import (
+    SPEND_REQUEST_STATUS_CHOICES,
+    SPEND_REQUEST_STATUS_PENDING,
+)
 from apps.referrals.models import ReferralLead
 from apps.users.models import Participant
 
@@ -34,7 +38,11 @@ class BonusSpendRequest(models.Model):
     )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     comment = models.CharField(max_length=255, blank=True, default="")
-    status = models.CharField(max_length=32, default="pending")
+    status = models.CharField(
+        max_length=32,
+        choices=SPEND_REQUEST_STATUS_CHOICES,
+        default=SPEND_REQUEST_STATUS_PENDING,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

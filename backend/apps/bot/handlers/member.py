@@ -11,6 +11,7 @@ from apps.bot.services import (
     register_participant_with_referral_code,
     update_participant_profile,
 )
+from apps.common.choices import get_lead_status_label, get_spend_request_status_label
 from apps.bot.ui import (
     BACK_TO_MENU_BUTTON_TEXT,
     CONSENT_BUTTON_TEXT,
@@ -178,15 +179,8 @@ async def handle_my_recommendations(message: Message) -> None:
         )
         return
 
-    status_map = {
-        "new": "Новая",
-        "in_progress": "В работе",
-        "ordered": "Ожидает подтверждения",
-        "bonus_confirmed": "Бонус подтверждён",
-        "rejected": "Отказ / не состоялось",
-    }
     invited_lines = [
-        f"— {client_name} — {status_map.get(status, status)} — {created_at:%d.%m.%Y}"
+        f"— {client_name} — {get_lead_status_label(status)} — {created_at:%d.%m.%Y}"
         for client_name, status, created_at in invited_leads
     ]
     await message.answer(
@@ -208,27 +202,18 @@ async def handle_my_requests(message: Message) -> None:
         )
         return
 
-    status_map = {
-        "new": "Новая",
-        "in_progress": "В работе",
-        "ordered": "Ожидает подтверждения",
-        "bonus_confirmed": "Бонус подтверждён",
-        "rejected": "Отклонена",
-        "pending": "На рассмотрении",
-        "approved": "Подтверждена",
-    }
     request_lines = []
 
     for company, status, created_at in requests_data["own_leads"]:
         company_name = company or "без компании"
         request_lines.append(
-            f"— Заявка для своей компании: {company_name} — {status_map.get(status, status)} — {created_at:%d.%m.%Y}"
+            f"— Заявка для своей компании: {company_name} — {get_lead_status_label(status)} — {created_at:%d.%m.%Y}"
         )
 
     for comment, status, created_at in requests_data["spend_requests"]:
         title = comment or "списание бонусов"
         request_lines.append(
-            f"— Запрос на подарок: {title} — {status_map.get(status, status)} — {created_at:%d.%m.%Y}"
+            f"— Запрос на подарок: {title} — {get_spend_request_status_label(status)} — {created_at:%d.%m.%Y}"
         )
 
     if not request_lines:
