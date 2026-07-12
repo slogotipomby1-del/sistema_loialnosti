@@ -5,6 +5,7 @@ from aiogram.types import Message
 from asgiref.sync import sync_to_async
 
 from apps.bot.services import (
+    get_participant_bonus_history_data,
     get_participant_dashboard_data,
     get_participant_referral_data,
     get_participant_requests_data,
@@ -18,6 +19,7 @@ from apps.bot.ui import (
     MAIN_CABINET_BUTTON_TEXT,
     MAIN_RECOMMEND_BUTTON_TEXT,
     MY_BALANCE_BUTTON_TEXT,
+    MY_HISTORY_BUTTON_TEXT,
     MY_LINK_BUTTON_TEXT,
     MY_RECOMMENDATIONS_BUTTON_TEXT,
     MY_REQUESTS_BUTTON_TEXT,
@@ -25,10 +27,12 @@ from apps.bot.ui import (
     REGISTER_BUTTON_TEXT,
     SKIP_BUTTON_TEXT,
     build_balance_text,
+    build_bonus_history_text,
     build_cabinet_intro_text,
     build_cabinet_keyboard,
     build_consent_keyboard,
     build_empty_invited_text,
+    build_empty_bonus_history_text,
     build_empty_requests_text,
     build_help_menu_keyboard,
     build_invite_client_text,
@@ -154,6 +158,46 @@ async def handle_my_balance(message: Message) -> None:
     balance = f"{dashboard_data['balance']:.2f}"
     await message.answer(
         build_balance_text(balance=balance),
+        reply_markup=build_cabinet_keyboard(),
+    )
+
+
+@router.message(F.text == MY_HISTORY_BUTTON_TEXT)
+async def handle_bonus_history(message: Message) -> None:
+    history_data = await sync_to_async(get_participant_bonus_history_data, thread_sensitive=True)(
+        telegram_id=str(message.from_user.id)
+    )
+
+    if not history_data:
+        await message.answer(
+            "Сначала нужно зарегистрироваться, чтобы смотреть историю бонусов.",
+            reply_markup=build_start_keyboard(),
+        )
+        return
+
+    history_lines = []
+
+    for amount, reason, created_at in history_data["accruals"]:
+        title = reason or "начисление бонусов"
+        history_lines.append(
+            f"— Начисление: +{amount:.2f} — {title} — {created_at:%d.%m.%Y}"
+        )
+
+    for amount, comment, created_at in history_data["spendings"]:
+        title = comment or "списание бонусов"
+        history_lines.append(
+            f"— Списание: -{amount:.2f} — {title} — {created_at:%d.%m.%Y}"
+        )
+
+    if not history_lines:
+        await message.answer(
+            build_empty_bonus_history_text(),
+            reply_markup=build_cabinet_keyboard(),
+        )
+        return
+
+    await message.answer(
+        build_bonus_history_text(history_lines=history_lines),
         reply_markup=build_cabinet_keyboard(),
     )
 

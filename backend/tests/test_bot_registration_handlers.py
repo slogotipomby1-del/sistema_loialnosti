@@ -8,6 +8,7 @@ from apps.bot.handlers.member import (
     RegistrationStates,
     SKIP_BUTTON_TEXT,
     back_to_main_menu,
+    handle_bonus_history,
     handle_company,
     handle_consent,
     handle_full_name,
@@ -143,6 +144,41 @@ def test_handle_my_balance_returns_balance(monkeypatch):
 
     message.answer.assert_awaited_once()
     assert "125.00" in message.answer.await_args.args[0]
+
+
+def test_handle_bonus_history_returns_empty_state(monkeypatch):
+    message = AsyncMock()
+    message.from_user = SimpleNamespace(id=12345)
+
+    monkeypatch.setattr(
+        "apps.bot.handlers.member.get_participant_bonus_history_data",
+        lambda **kwargs: {"accruals": [], "spendings": []},
+    )
+
+    asyncio.run(handle_bonus_history(message))
+
+    message.answer.assert_awaited_once()
+    assert "истории бонусов нет операций" in message.answer.await_args.args[0].lower()
+
+
+def test_handle_bonus_history_returns_operations(monkeypatch):
+    message = AsyncMock()
+    message.from_user = SimpleNamespace(id=12345)
+
+    monkeypatch.setattr(
+        "apps.bot.handlers.member.get_participant_bonus_history_data",
+        lambda **kwargs: {
+            "accruals": [(60, "За рекомендацию", datetime(2026, 7, 10))],
+            "spendings": [(40, "Термокружка", datetime(2026, 7, 11))],
+        },
+    )
+
+    asyncio.run(handle_bonus_history(message))
+
+    message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0]
+    assert "за рекомендацию" in sent_text.lower()
+    assert "термокружка" in sent_text.lower()
 
 
 def test_handle_my_recommendations_returns_empty_state(monkeypatch):

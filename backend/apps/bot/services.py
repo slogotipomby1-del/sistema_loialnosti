@@ -2,7 +2,7 @@ import secrets
 from decimal import Decimal
 
 from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
-from apps.common.choices import SPEND_REQUEST_STATUS_PENDING
+from apps.common.choices import SPEND_REQUEST_STATUS_APPROVED, SPEND_REQUEST_STATUS_PENDING
 from apps.notifications import telegram as telegram_notifications
 from apps.referrals.models import ReferralLead, ReferralLink
 from apps.users.models import Participant
@@ -112,6 +112,31 @@ def get_participant_requests_data(*, telegram_id: str):
     return {
         "own_leads": own_leads,
         "spend_requests": spend_requests,
+    }
+
+
+def get_participant_bonus_history_data(*, telegram_id: str):
+    participant = Participant.objects.filter(telegram_id=telegram_id).first()
+    if not participant:
+        return None
+
+    accruals = list(
+        BonusLedgerEntry.objects.filter(participant=participant)
+        .order_by("-created_at")
+        .values_list("amount", "reason", "created_at")
+    )
+    spendings = list(
+        BonusSpendRequest.objects.filter(
+            participant=participant,
+            status=SPEND_REQUEST_STATUS_APPROVED,
+        )
+        .order_by("-created_at")
+        .values_list("amount", "comment", "created_at")
+    )
+
+    return {
+        "accruals": accruals,
+        "spendings": spendings,
     }
 
 

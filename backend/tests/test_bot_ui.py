@@ -25,6 +25,7 @@ def test_cabinet_keyboard_has_expected_buttons():
 
     assert labels == [
         ui.MY_BALANCE_BUTTON_TEXT,
+        ui.MY_HISTORY_BUTTON_TEXT,
         ui.MY_RECOMMENDATIONS_BUTTON_TEXT,
         ui.MY_REQUESTS_BUTTON_TEXT,
         ui.OWN_COMPANY_ORDER_BUTTON_TEXT,
@@ -154,6 +155,17 @@ def test_balance_text_contains_amount():
 
     assert "125.00" in text
     assert "1 мерч-бонус = 1 BYN" in text
+
+
+def test_bonus_history_texts_are_present():
+    empty_text = ui.build_empty_bonus_history_text()
+    filled_text = ui.build_bonus_history_text(
+        history_lines=["— Начисление: +60.00 — За рекомендацию — 10.07.2026"]
+    )
+
+    assert "истории бонусов нет операций" in empty_text.lower()
+    assert "история бонусов" in filled_text.lower()
+    assert "подтверждённые операции" in filled_text.lower()
 
 
 def test_empty_invited_text_contains_hint():

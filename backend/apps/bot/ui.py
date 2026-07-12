@@ -9,6 +9,7 @@ MAIN_SPEND_BUTTON_TEXT = "🎁 Потратить бонусы"
 MAIN_HELP_BUTTON_TEXT = "📘 Помощь и правила"
 
 MY_BALANCE_BUTTON_TEXT = "💳 Мой баланс"
+MY_HISTORY_BUTTON_TEXT = "🧾 История бонусов"
 MY_RECOMMENDATIONS_BUTTON_TEXT = "📈 Мои рекомендации"
 MY_REQUESTS_BUTTON_TEXT = "📄 Мои заявки"
 OWN_COMPANY_ORDER_BUTTON_TEXT = "🏢 Заказать для своей компании"
@@ -66,6 +67,7 @@ def build_cabinet_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=MY_BALANCE_BUTTON_TEXT)],
+            [KeyboardButton(text=MY_HISTORY_BUTTON_TEXT)],
             [KeyboardButton(text=MY_RECOMMENDATIONS_BUTTON_TEXT)],
             [KeyboardButton(text=MY_REQUESTS_BUTTON_TEXT)],
             [KeyboardButton(text=OWN_COMPANY_ORDER_BUTTON_TEXT)],
@@ -136,7 +138,7 @@ def build_skip_keyboard() -> ReplyKeyboardMarkup:
 def build_cabinet_intro_text() -> str:
     return (
         "Здесь собрана ваша основная информация по программе:\n"
-        "баланс, рекомендации и собственные заявки."
+        "баланс, история бонусов, рекомендации и собственные заявки."
     )
 
 
@@ -324,6 +326,24 @@ def build_balance_text(*, balance: str) -> str:
         f"{balance} мерч-бонусов\n\n"
         "1 мерч-бонус = 1 BYN внутри программы.\n"
         "Бонусы можно использовать на подарок, доставку, нанесение или часть следующего заказа."
+    )
+
+
+def build_empty_bonus_history_text() -> str:
+    return (
+        "Пока в истории бонусов нет операций.\n"
+        "Когда будут подтверждённые начисления или списания, они появятся здесь."
+    )
+
+
+def build_bonus_history_text(*, history_lines: list[str]) -> str:
+    history_block = "\n".join(history_lines)
+    return (
+        "История бонусов:\n"
+        f"{history_block}\n\n"
+        "Здесь показываются только подтверждённые операции:\n"
+        "— начисления бонусов;\n"
+        "— подтверждённые списания."
     )
 
 
