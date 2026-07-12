@@ -2,31 +2,31 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardBu
 
 SITE_URL = "https://slogotipom.by/"
 
-REGISTER_BUTTON_TEXT = "Зарегистрироваться"
-MAIN_CABINET_BUTTON_TEXT = "Мой кабинет"
-MAIN_RECOMMEND_BUTTON_TEXT = "Рекомендовать компанию"
-MAIN_SPEND_BUTTON_TEXT = "Потратить бонусы"
-MAIN_HELP_BUTTON_TEXT = "Помощь и правила"
+REGISTER_BUTTON_TEXT = "✨ Зарегистрироваться"
+MAIN_CABINET_BUTTON_TEXT = "👤 Мой кабинет"
+MAIN_RECOMMEND_BUTTON_TEXT = "🤝 Рекомендовать компанию"
+MAIN_SPEND_BUTTON_TEXT = "🎁 Потратить бонусы"
+MAIN_HELP_BUTTON_TEXT = "📘 Помощь и правила"
 
-MY_BALANCE_BUTTON_TEXT = "Мой баланс"
-MY_RECOMMENDATIONS_BUTTON_TEXT = "Мои рекомендации"
-MY_REQUESTS_BUTTON_TEXT = "Мои заявки"
-OWN_COMPANY_ORDER_BUTTON_TEXT = "Заказать для своей компании"
+MY_BALANCE_BUTTON_TEXT = "💳 Мой баланс"
+MY_RECOMMENDATIONS_BUTTON_TEXT = "📈 Мои рекомендации"
+MY_REQUESTS_BUTTON_TEXT = "📄 Мои заявки"
+OWN_COMPANY_ORDER_BUTTON_TEXT = "🏢 Заказать для своей компании"
 
-MY_LINK_BUTTON_TEXT = "Моя ссылка"
-READY_TEXT_BUTTON_TEXT = "Готовый текст для отправки"
+MY_LINK_BUTTON_TEXT = "🔗 Моя ссылка"
+READY_TEXT_BUTTON_TEXT = "✉️ Готовый текст для отправки"
 
-GIFTS_BUTTON_TEXT = "Подарки за бонусы"
-HOW_SPEND_BUTTON_TEXT = "Как потратить бонусы"
-CATALOG_BUTTON_TEXT = "Каталог / идеи подарков"
+GIFTS_BUTTON_TEXT = "🎁 Подарки за бонусы"
+HOW_SPEND_BUTTON_TEXT = "💡 Как потратить бонусы"
+CATALOG_BUTTON_TEXT = "🛍️ Каталог / идеи подарков"
 
-RULES_BUTTON_TEXT = "Правила программы"
-SUPPORT_BUTTON_TEXT = "Написать администратору"
+RULES_BUTTON_TEXT = "📋 Правила программы"
+SUPPORT_BUTTON_TEXT = "💬 Написать администратору"
 
-BACK_TO_MENU_BUTTON_TEXT = "Назад в меню"
-SEND_PHONE_BUTTON_TEXT = "Отправить телефон"
-CONSENT_BUTTON_TEXT = "Согласен(на)"
-SKIP_BUTTON_TEXT = "Пропустить"
+BACK_TO_MENU_BUTTON_TEXT = "⬅️ Назад в меню"
+SEND_PHONE_BUTTON_TEXT = "📱 Отправить телефон"
+CONSENT_BUTTON_TEXT = "✅ Согласен(на)"
+SKIP_BUTTON_TEXT = "⏭️ Пропустить"
 
 
 def build_start_text() -> str:
