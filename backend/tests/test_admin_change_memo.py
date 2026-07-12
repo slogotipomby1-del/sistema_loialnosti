@@ -29,7 +29,7 @@ def sample_participant(db):
 
 
 @pytest.mark.django_db
-def test_referral_lead_change_page_shows_memo(client, admin_user, sample_participant):
+def test_referral_lead_change_page_shows_client_card_and_memo(client, admin_user, sample_participant):
     link = ReferralLink.objects.create(code="ref-100500", participant=sample_participant)
     lead = ReferralLead.objects.create(
         referral_link=link,
@@ -43,7 +43,9 @@ def test_referral_lead_change_page_shows_memo(client, admin_user, sample_partici
 
     assert response.status_code == 200
     content = response.content.decode("utf-8")
+    assert 'data-testid="admin-client-card"' in content
     assert 'data-testid="admin-change-memo-card"' in content
+    assert "Карточка клиента" in content
     assert "Проверка реферальной заявки" in content
 
 

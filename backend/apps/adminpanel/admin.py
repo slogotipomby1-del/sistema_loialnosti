@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
+from apps.common.choices import get_lead_status_label
 from apps.referrals.models import ReferralLead, ReferralLink
 from apps.users.models import Participant
 
@@ -56,6 +57,28 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
         "Если у компании уже были успешные завершённые заказы, заявка не считается новой рекомендацией.",
     )
     memo_note = "После проверки выберите статус заявки и зафиксируйте комментарий, если есть спорный случай."
+
+    def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
+        if obj:
+            context["admin_client_card"] = {
+                "title": "Карточка клиента",
+                "items": (
+                    ("Клиент", obj.client_name or "Не указан"),
+                    ("Компания", obj.client_company or "Не указана"),
+                    ("Телефон", obj.client_phone or "Не указан"),
+                    ("Кто пригласил", self.referrer_name(obj)),
+                    ("Статус заявки", get_lead_status_label(obj.status)),
+                    ("Комментарий администратора", obj.admin_comment or "Комментарий пока не добавлен"),
+                ),
+            }
+        return super().render_change_form(
+            request,
+            context,
+            add=add,
+            change=change,
+            form_url=form_url,
+            obj=obj,
+        )
 
     @admin.display(description="\u041a\u0442\u043e \u043f\u0440\u0438\u0433\u043b\u0430\u0441\u0438\u043b")
     def referrer_name(self, obj: ReferralLead) -> str:

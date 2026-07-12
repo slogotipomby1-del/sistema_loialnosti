@@ -1,6 +1,26 @@
 {% extends "admin/change_form.html" %}
 
 {% block content %}
+  {% if admin_client_card %}
+    <div data-testid="admin-client-card" style="margin-bottom: 20px; padding: 18px; border: 1px solid #d7e7d7; border-radius: 12px; background: linear-gradient(180deg, #fbfffb 0%, #f2fbf2 100%); box-shadow: 0 1px 2px rgba(23, 43, 77, 0.08);">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <div style="width: 34px; height: 34px; border-radius: 999px; background: #3c7a4a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+          👤
+        </div>
+        <h2 style="margin: 0; font-size: 20px;">{{ admin_client_card.title }}</h2>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+        {% for label, value in admin_client_card.items %}
+          <div style="padding: 12px; border-radius: 10px; background: #fff; border: 1px solid #dfeee0;">
+            <div style="font-size: 12px; color: #5d6b5f; margin-bottom: 4px;">{{ label }}</div>
+            <div style="font-weight: 600; color: #1f2d22; white-space: pre-line;">{{ value }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
   {% if admin_memo %}
     <div data-testid="admin-change-memo-card" style="margin-bottom: 20px; padding: 16px 18px; border: 1px solid #cfe2f3; border-radius: 12px; background: linear-gradient(180deg, #f7fbff 0%, #eef7ff 100%); box-shadow: 0 1px 2px rgba(23, 43, 77, 0.08);">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
