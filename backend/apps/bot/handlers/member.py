@@ -31,6 +31,7 @@ from apps.bot.ui import (
     build_cabinet_intro_text,
     build_cabinet_keyboard,
     build_consent_keyboard,
+    build_consent_prompt_text,
     build_empty_invited_text,
     build_empty_bonus_history_text,
     build_empty_requests_text,
@@ -303,7 +304,7 @@ async def handle_phone(message: Message, state: FSMContext) -> None:
     await state.update_data(phone=phone)
     await state.set_state(RegistrationStates.waiting_consent)
     await message.answer(
-        "Подтвердите согласие на обработку персональных данных.",
+        build_consent_prompt_text(),
         reply_markup=build_consent_keyboard(),
     )
 

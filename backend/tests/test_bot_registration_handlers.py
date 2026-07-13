@@ -25,6 +25,7 @@ from apps.bot.handlers.member import (
 )
 from apps.bot.ui import (
     build_cabinet_intro_text,
+    build_consent_prompt_text,
     build_empty_invited_text,
     build_empty_requests_text,
     build_main_menu_keyboard,
@@ -281,6 +282,7 @@ def test_handle_phone_stores_phone_and_asks_for_consent():
     assert state.current_state == RegistrationStates.waiting_consent
     assert state.data["phone"] == "+375291112233"
     message.answer.assert_awaited_once()
+    assert message.answer.await_args.args[0] == build_consent_prompt_text()
 
 
 def test_handle_consent_registers_participant_and_asks_for_company(monkeypatch):

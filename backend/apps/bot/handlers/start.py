@@ -1,7 +1,9 @@
+from pathlib import Path
+
 from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import FSInputFile, Message
 from asgiref.sync import sync_to_async
 
 from apps.bot.services import get_participant_referral_data
@@ -14,6 +16,7 @@ from apps.bot.ui import (
 
 
 router = Router(name="start")
+WELCOME_CARD_PATH = Path(__file__).resolve().parent.parent / "assets" / "welcome_card.png"
 
 
 @router.message(CommandStart())
@@ -33,6 +36,9 @@ async def handle_start(message: Message, state: FSMContext) -> None:
         )
         return
 
+    await message.answer_photo(
+        photo=FSInputFile(str(WELCOME_CARD_PATH)),
+    )
     await message.answer(
         build_start_text(),
         reply_markup=build_start_keyboard(),

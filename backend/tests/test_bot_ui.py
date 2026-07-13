@@ -70,9 +70,17 @@ def test_help_menu_keyboard_has_expected_buttons():
 def test_start_text_contains_program_message():
     text = ui.build_start_text()
 
-    assert "Мерч-бонусы" in text
-    assert "рекомендац" in text.lower()
+    assert "Корпоративный стиль" in text
+    assert "бонусы" in text.lower()
+    assert "подар" in text.lower()
     assert "регистрац" in text.lower()
+
+
+def test_consent_prompt_text_explains_next_step():
+    text = ui.build_consent_prompt_text()
+
+    assert "один короткий шаг" in text.lower()
+    assert "обработку персональных данных" in text.lower()
 
 
 def test_registration_success_text_contains_referral_url():
