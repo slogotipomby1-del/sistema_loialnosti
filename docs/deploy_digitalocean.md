@@ -1,8 +1,8 @@
 # Деплой на DigitalOcean
 
-Ниже базовый путь запуска MVP на сервере Ubuntu в DigitalOcean.
+Ниже базовый рабочий сценарий запуска MVP на Ubuntu-сервере.
 
-## 1. Что должно быть на сервере
+## Что должно быть на сервере
 
 - Python 3.12
 - PostgreSQL
@@ -10,39 +10,40 @@
 - systemd
 - git
 
-## 2. Что нужно подготовить
+## Что нужно подготовить
 
-- домен или поддомен для админки
+- сервер DigitalOcean
 - Telegram bot token
-- Telegram chat id администратора
+- Telegram chat id администратора или группы
 - строку подключения `DATABASE_URL`
 - `DJANGO_SECRET_KEY`
 
-## 3. Переменные окружения
+## Переменные окружения
 
-Пример production-набора:
+Пример файла `/opt/sistema_loialnosti/.env`:
 
 ```env
 DJANGO_SECRET_KEY=very-secret-key
 DJANGO_DEBUG=0
-DJANGO_ALLOWED_HOSTS=admin.example.com,server_ip
-DJANGO_CSRF_TRUSTED_ORIGINS=https://admin.example.com
-DATABASE_URL=postgres://user:password@127.0.0.1:5432/referral_mvp
+DJANGO_ALLOWED_HOSTS=142.93.49.181,localhost,127.0.0.1
+DJANGO_CSRF_TRUSTED_ORIGINS=http://142.93.49.181
+DATABASE_URL=postgres://referral_user:StrongPassword123!@127.0.0.1:5432/referral_mvp
 TELEGRAM_BOT_TOKEN=telegram-token
-TELEGRAM_ADMIN_CHAT_ID=123456789
+TELEGRAM_ADMIN_CHAT_ID=-1001234567890
 ```
 
-## 4. Установка проекта
+## Установка проекта
 
 ```bash
+cd /opt
 git clone https://github.com/slogotipomby1-del/sistema_loialnosti.git
-cd sistema_loialnosti/backend
+cd /opt/sistema_loialnosti/backend
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -e .[dev,prod]
 ```
 
-## 5. Подготовка Django
+## Подготовка Django
 
 ```bash
 python manage.py migrate
@@ -50,45 +51,56 @@ python manage.py collectstatic --noinput
 python manage.py createsuperuser
 ```
 
-## 6. Запуск админки через gunicorn
+## Systemd
 
-Пример команды:
-
-```bash
-gunicorn config.wsgi:application --bind 127.0.0.1:8000
-```
-
-## 7. Запуск Telegram-бота
-
-Пример команды:
+Скопируйте готовые unit-файлы:
 
 ```bash
-python -m apps.bot.run_polling
+cp /opt/sistema_loialnosti/deploy/systemd/referral_admin.service /etc/systemd/system/referral_admin.service
+cp /opt/sistema_loialnosti/deploy/systemd/referral_bot.service /etc/systemd/system/referral_bot.service
+systemctl daemon-reload
+systemctl enable --now referral_admin
+systemctl enable --now referral_bot
 ```
 
-## 8. Готовые server-файлы в проекте
+## Nginx
 
-В репозитории уже лежат шаблоны:
+Скопируйте конфиг:
 
-- `deploy/systemd/referral_admin.service`
-- `deploy/systemd/referral_bot.service`
-- `deploy/nginx/referral_admin.conf`
+```bash
+cp /opt/sistema_loialnosti/deploy/nginx/referral_admin.conf /etc/nginx/sites-available/referral_admin.conf
+ln -sf /etc/nginx/sites-available/referral_admin.conf /etc/nginx/sites-enabled/referral_admin.conf
+nginx -t
+systemctl restart nginx
+```
 
-Их нужно адаптировать под ваш домен, пользователя сервера и путь установки.
+## Проверка
 
-## 9. Дальше подключается Nginx
+```bash
+systemctl status referral_admin --no-pager
+systemctl status referral_bot --no-pager
+systemctl status nginx --no-pager
+ss -tlnp | grep :80
+```
 
-Nginx должен:
+## Firewall в DigitalOcean
 
-- отдавать `staticfiles`
-- проксировать админку на `127.0.0.1:8000`
-- принимать HTTPS
+Для админки должен быть открыт inbound:
 
-## 10. Что делать следующим этапом
+- HTTP / TCP / 80 / All IPv4
 
-После этого нужно отдельно:
+Для SSH:
 
-- подключить постоянный запуск Telegram-бота
-- вынести секреты в systemd environment file
-- настроить SSL
-- сделать backup PostgreSQL
+- SSH / TCP / 22 / All IPv4
+
+## Текущий адрес админки
+
+- `http://142.93.49.181/admin/`
+
+## Следующий этап
+
+Когда будете готовы, следующим логичным шагом будет:
+
+- вынести админку на отдельный домен
+- включить HTTPS
+- подключить amoCRM на этапе 2
