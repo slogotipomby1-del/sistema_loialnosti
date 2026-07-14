@@ -65,6 +65,7 @@ def test_start_registration_asks_for_name():
 
     assert state.current_state == RegistrationStates.waiting_full_name
     message.answer.assert_awaited_once()
+    assert "давайте познакомимся" in message.answer.await_args.args[0].lower()
 
 
 def test_open_cabinet_menu_returns_intro():
@@ -269,6 +270,9 @@ def test_handle_full_name_stores_name_and_asks_for_phone():
     assert state.current_state == RegistrationStates.waiting_phone
     assert state.data["full_name"] == "Анна Иванова"
     message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0].lower()
+    assert "укажите ваш телефон" in sent_text
+    assert "заявкам и бонусам" in sent_text
 
 
 def test_handle_phone_stores_phone_and_asks_for_consent():
@@ -354,3 +358,14 @@ def test_handle_position_saves_profile_and_returns_menu(monkeypatch):
         company="OOO Corporate Style",
         position="Маркетолог",
     )
+
+
+def test_registration_success_text_mentions_available_sections():
+    text = build_registration_success_text(
+        full_name="Анна Иванова",
+        referral_url="https://t.me/SvoyCorpStyleBot?start=abc123",
+    )
+
+    assert "ваша ссылка" in text.lower()
+    assert "баланс и история бонусов" in text.lower()
+    assert "подарки за бонусы" in text.lower()

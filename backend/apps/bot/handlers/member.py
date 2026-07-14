@@ -74,7 +74,7 @@ async def build_referral_url(message: Message, referral_code: str) -> str:
 @router.message(F.text == REGISTER_BUTTON_TEXT)
 async def start_registration(message: Message, state: FSMContext) -> None:
     await state.set_state(RegistrationStates.waiting_full_name)
-    await message.answer("Как вас зовут?")
+    await message.answer("Давайте познакомимся.\n\nКак вас зовут?")
 
 
 @router.message(F.text == MAIN_CABINET_BUTTON_TEXT)
@@ -278,12 +278,16 @@ async def handle_my_requests(message: Message) -> None:
 async def handle_full_name(message: Message, state: FSMContext) -> None:
     full_name = (message.text or "").strip()
     if not full_name:
-        await message.answer("Пожалуйста, напишите ваше имя.")
+        await message.answer("Напишите, пожалуйста, ваше имя.")
         return
 
     await state.update_data(full_name=full_name)
     await state.set_state(RegistrationStates.waiting_phone)
-    await message.answer("Укажите ваш телефон.", reply_markup=build_phone_keyboard())
+    await message.answer(
+        "Спасибо! Теперь укажите ваш телефон.\n\n"
+        "Он нужен, чтобы мы могли связаться с вами по заявкам и бонусам.",
+        reply_markup=build_phone_keyboard(),
+    )
 
 
 @router.message(RegistrationStates.waiting_phone)
@@ -368,6 +372,6 @@ async def handle_position(message: Message, state: FSMContext) -> None:
 @router.message(RegistrationStates.waiting_consent)
 async def handle_consent_required(message: Message) -> None:
     await message.answer(
-        "Чтобы завершить регистрацию, нажмите кнопку согласия.",
+        "Чтобы завершить регистрацию, нажмите кнопку согласия ниже.",
         reply_markup=build_consent_keyboard(),
     )
