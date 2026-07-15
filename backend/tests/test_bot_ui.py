@@ -101,6 +101,7 @@ def test_share_link_text_explains_reward():
 
     assert "https://t.me/SvoyCorpStyleBot?start=abc123" in text
     assert "мерч-бонусы" in text.lower()
+    assert "знакомому" in text.lower()
 
 
 def test_invite_client_text_contains_ready_message():
@@ -110,6 +111,7 @@ def test_invite_client_text_contains_ready_message():
 
     assert "https://t.me/SvoyCorpStyleBot?start=abc123" in text
     assert "корпоративный стиль" in text.lower()
+    assert "брендированной продукцией" in text.lower()
 
 
 def test_rules_text_contains_program_restrictions():
@@ -117,6 +119,7 @@ def test_rules_text_contains_program_restrictions():
 
     assert "нельзя вывести деньгами" in text.lower()
     assert "2000 byn" in text.lower()
+    assert "напишите администратору" in text.lower()
 
 
 def test_catalog_text_contains_site_and_categories():
@@ -131,6 +134,7 @@ def test_spend_bonuses_text_contains_limits():
 
     assert "20%" in text
     assert "200 byn" in text.lower()
+    assert "их можно потратить" in text.lower()
 
 
 def test_gifts_text_and_card_builders_contain_gift_options():
@@ -144,9 +148,11 @@ def test_gifts_text_and_card_builders_contain_gift_options():
     )
     keyboard = ui.build_gift_card_keyboard(slug="backpack", is_available=True)
 
-    assert "5 карточек" in text
+    assert "подарки, которые можно запросить" in text.lower()
+    assert "добавим её позже" in text.lower()
     assert "Рюкзак" in card_text
     assert "180" in card_text
+    assert "подарок 1 из 5" in card_text.lower()
     assert keyboard.inline_keyboard[0][0].text == "Хочу этот подарок"
 
 
@@ -156,6 +162,7 @@ def test_support_texts_are_present():
 
     assert "администратор" in prompt.lower()
     assert "отправлено" in sent.lower()
+    assert "сюда можно написать" in prompt.lower()
 
 
 def test_balance_text_contains_amount():
@@ -180,6 +187,21 @@ def test_empty_invited_text_contains_hint():
     text = ui.build_empty_invited_text()
 
     assert "пока у вас нет рекомендаций" in text.lower()
+    assert "отобразится здесь" in text.lower()
+
+
+def test_intro_texts_explain_sections():
+    cabinet = ui.build_cabinet_intro_text()
+    recommend = ui.build_recommend_intro_text()
+    member = ui.build_member_start_text(full_name="Ирина")
+    spend = ui.build_spend_intro_text()
+    help_text = ui.build_help_intro_text()
+
+    assert "это ваш кабинет участника" in cabinet.lower()
+    assert "инструменты для рекомендации" in recommend.lower()
+    assert "выберите, что хотите сделать сейчас" in member.lower()
+    assert "потратить накопленные бонусы" in spend.lower()
+    assert "вся важная информация" in help_text.lower()
 
 
 def test_invited_text_contains_status_explanation():
@@ -196,4 +218,11 @@ def test_my_requests_text_builders():
     )
 
     assert "нет собственных заявок" in empty_text.lower()
+    assert "появится здесь" in empty_text.lower()
     assert "ваши заявки" in filled_text.lower()
+
+
+def test_gift_request_sent_text_mentions_requests_section():
+    text = ui.build_gift_request_sent_text(gift_title="Рюкзак", gift_amount=180)
+
+    assert "мои заявки" in text.lower()

@@ -20,7 +20,7 @@ def test_handle_gifts_menu_sends_intro_and_five_cards(monkeypatch):
     first_text = message.answer.await_args_list[0].args[0]
     second_text = message.answer.await_args_list[1].args[0]
     third_text = message.answer.await_args_list[2].args[0]
-    assert "5 карточек" in first_text
+    assert "подарки, которые можно запросить" in first_text.lower()
     assert "Рюкзак" in second_text
     assert "Термокружка" in third_text
 
