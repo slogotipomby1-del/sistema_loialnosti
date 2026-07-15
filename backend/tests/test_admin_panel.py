@@ -37,6 +37,7 @@ def test_bonus_spend_request_admin_has_main_columns():
 
     assert admin_instance.list_display == (
         "participant",
+        "participant_company",
         "participant_phone",
         "comment",
         "amount",
@@ -69,6 +70,7 @@ def test_participant_admin_has_useful_dashboard_columns():
     )
     assert admin_instance.ordering == ("-created_at",)
     assert admin_instance.list_per_page == 25
+    assert admin_instance.readonly_fields == ("created_at", "bonus_balance", "invited_leads_count", "spend_requests_count")
 
 
 def test_referral_lead_admin_has_helpful_list_settings():
@@ -82,6 +84,7 @@ def test_referral_lead_admin_has_helpful_list_settings():
     assert admin_instance.date_hierarchy == "created_at"
     assert admin_instance.list_per_page == 25
     assert filter_names == ("status", "created_at", "lead_source", "has_admin_comment")
+    assert admin_instance.readonly_fields == ("lead_type_label", "referrer_name", "referrer_company", "created_at")
 
 
 def test_bonus_spend_request_admin_has_helpful_list_settings():
@@ -95,6 +98,7 @@ def test_bonus_spend_request_admin_has_helpful_list_settings():
     assert admin_instance.date_hierarchy == "created_at"
     assert admin_instance.list_per_page == 25
     assert filter_names == ("status", "created_at", "has_comment")
+    assert admin_instance.readonly_fields == ("participant_phone", "participant_company", "created_at")
 
 
 @pytest.mark.django_db
@@ -289,3 +293,22 @@ def test_bonus_spend_request_admin_bulk_actions_update_statuses():
     admin_instance.mark_as_rejected(request, BonusSpendRequest.objects.filter(pk=request_obj.pk))
     request_obj.refresh_from_db()
     assert request_obj.status == SPEND_REQUEST_STATUS_REJECTED
+
+
+@pytest.mark.django_db
+def test_bonus_spend_request_admin_shows_participant_company():
+    participant = Participant.objects.create(
+        telegram_id="tg-admin-7",
+        full_name="Елена",
+        phone="+375291010101",
+        company="ООО Альфа",
+        consent_accepted=True,
+    )
+    request_obj = BonusSpendRequest.objects.create(
+        participant=participant,
+        amount="50.00",
+        comment="Доставка",
+    )
+    admin_instance = site._registry[BonusSpendRequest]
+
+    assert admin_instance.participant_company(request_obj) == "ООО Альфа"

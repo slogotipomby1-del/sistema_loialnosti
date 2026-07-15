@@ -77,6 +77,17 @@ def test_participant_change_page_shows_profile_card(client, admin_user, sample_p
 
 
 @pytest.mark.django_db
+def test_participant_change_page_shows_program_section_fields(client, admin_user, sample_participant):
+    client.force_login(admin_user)
+    response = client.get(reverse("admin:users_participant_change", args=[sample_participant.pk]))
+
+    assert response.status_code == 200
+    content = response.content.decode("utf-8")
+    assert "Программа" in content
+    assert "consent_accepted" in content
+
+
+@pytest.mark.django_db
 def test_bonus_entry_change_page_shows_memo(client, admin_user, sample_participant):
     entry = BonusLedgerEntry.objects.create(
         participant=sample_participant,
@@ -109,3 +120,4 @@ def test_bonus_spend_request_change_page_shows_memo(client, admin_user, sample_p
     content = response.content.decode("utf-8")
     assert 'data-testid="admin-change-memo-card"' in content
     assert "Проверка списания бонусов" in content
+    assert "Компания" in content

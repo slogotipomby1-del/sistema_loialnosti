@@ -20,6 +20,7 @@ admin.site.site_header = "\u0410\u0434\u043c\u0438\u043d\u043a\u0430 \u043f\u044
 admin.site.site_title = "\u0410\u0434\u043c\u0438\u043d\u043a\u0430 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u044b \u043b\u043e\u044f\u043b\u044c\u043d\u043e\u0441\u0442\u0438"
 admin.site.index_title = "\u0423\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u0437\u0430\u044f\u0432\u043a\u0430\u043c\u0438 \u0438 \u0431\u043e\u043d\u0443\u0441\u0430\u043c\u0438"
 admin.site.index_template = "adminpanel/index.html"
+admin.site.empty_value_display = "—"
 
 
 class ReferralLeadSourceFilter(admin.SimpleListFilter):
@@ -119,6 +120,12 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
     list_filter = ("consent_accepted", "is_primary_contact", "created_at")
     list_per_page = 25
     ordering = ("-created_at",)
+    readonly_fields = ("created_at", "bonus_balance", "invited_leads_count", "spend_requests_count")
+    fieldsets = (
+        ("Участник", {"fields": ("full_name", "phone", "telegram_id")}),
+        ("Компания", {"fields": ("company", "position", "is_primary_contact")}),
+        ("Программа", {"fields": ("consent_accepted", "bonus_balance", "invited_leads_count", "spend_requests_count", "created_at")}),
+    )
 
     def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
         if obj:
@@ -189,6 +196,12 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
     actions = ("mark_as_in_progress", "mark_as_ordered", "mark_as_bonus_confirmed", "mark_as_rejected")
+    readonly_fields = ("lead_type_label", "referrer_name", "referrer_company", "created_at")
+    fieldsets = (
+        ("Клиент", {"fields": ("client_company", "client_name", "client_phone")}),
+        ("Источник", {"fields": ("lead_type_label", "referral_link", "referrer_name", "referrer_company")}),
+        ("Обработка", {"fields": ("status", "admin_comment", "created_at")}),
+    )
     memo_title = "Проверка реферальной заявки"
     memo_intro = "Перед подтверждением проверьте, что клиент действительно подходит под правила программы."
     memo_items = (
@@ -278,6 +291,10 @@ class BonusLedgerEntryAdmin(AdminMemoMixin, admin.ModelAdmin):
     list_per_page = 25
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
+    readonly_fields = ("created_at",)
+    fieldsets = (
+        ("Начисление", {"fields": ("participant", "amount", "reason", "lead", "created_at")}),
+    )
     memo_title = "Проверка начисления бонусов"
     memo_intro = "Начисление делается только после ручной проверки условий сделки."
     memo_items = (
@@ -291,8 +308,8 @@ class BonusLedgerEntryAdmin(AdminMemoMixin, admin.ModelAdmin):
 
 @admin.register(BonusSpendRequest)
 class BonusSpendRequestAdmin(AdminMemoMixin, admin.ModelAdmin):
-    list_display = ("participant", "participant_phone", "comment", "amount", "status_label", "created_at")
-    search_fields = ("participant__full_name", "participant__phone", "comment")
+    list_display = ("participant", "participant_company", "participant_phone", "comment", "amount", "status_label", "created_at")
+    search_fields = ("participant__full_name", "participant__company", "participant__phone", "comment")
     list_filter = ("status", "created_at", HasCommentFilter)
     autocomplete_fields = ("participant",)
     list_select_related = ("participant",)
@@ -300,6 +317,11 @@ class BonusSpendRequestAdmin(AdminMemoMixin, admin.ModelAdmin):
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
     actions = ("mark_as_approved", "mark_as_rejected")
+    readonly_fields = ("participant_phone", "participant_company", "created_at")
+    fieldsets = (
+        ("Участник", {"fields": ("participant", "participant_company", "participant_phone")}),
+        ("Запрос", {"fields": ("comment", "amount", "status", "created_at")}),
+    )
     memo_title = "Проверка списания бонусов"
     memo_intro = "Списание подтверждается вручную и только по правилам программы."
     memo_items = (
@@ -313,6 +335,10 @@ class BonusSpendRequestAdmin(AdminMemoMixin, admin.ModelAdmin):
     @admin.display(description="Телефон")
     def participant_phone(self, obj: BonusSpendRequest) -> str:
         return obj.participant.phone
+
+    @admin.display(description="Компания")
+    def participant_company(self, obj: BonusSpendRequest) -> str:
+        return obj.participant.company or "Не указана"
 
     @admin.display(description="Статус")
     def status_label(self, obj: BonusSpendRequest) -> str:
