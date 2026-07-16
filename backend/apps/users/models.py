@@ -3,14 +3,14 @@ from django.db import models, transaction
 
 
 class Participant(models.Model):
-    telegram_id = models.CharField(max_length=64, unique=True)
-    full_name = models.CharField(max_length=255)
-    phone = models.CharField(max_length=32)
-    company = models.CharField(max_length=255, blank=True, default="")
-    position = models.CharField(max_length=255, blank=True, default="")
-    is_primary_contact = models.BooleanField(default=False)
-    consent_accepted = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    telegram_id = models.CharField("Telegram ID", max_length=64, unique=True)
+    full_name = models.CharField("Участник", max_length=255)
+    phone = models.CharField("Телефон", max_length=32)
+    company = models.CharField("Компания", max_length=255, blank=True, default="")
+    position = models.CharField("Должность", max_length=255, blank=True, default="")
+    is_primary_contact = models.BooleanField("Основной контакт", default=False)
+    consent_accepted = models.BooleanField("Согласие получено", default=False)
+    created_at = models.DateTimeField("Дата регистрации", auto_now_add=True)
 
     class Meta:
         verbose_name = "Участник"
