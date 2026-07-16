@@ -61,7 +61,9 @@ def test_help_menu_keyboard_has_expected_buttons():
     labels = [row[0].text for row in keyboard.keyboard]
 
     assert labels == [
+        ui.HOW_IT_WORKS_BUTTON_TEXT,
         ui.RULES_BUTTON_TEXT,
+        ui.FAQ_BUTTON_TEXT,
         ui.SUPPORT_BUTTON_TEXT,
         ui.BACK_TO_MENU_BUTTON_TEXT,
     ]
@@ -122,6 +124,16 @@ def test_rules_text_contains_program_restrictions():
     assert "напишите администратору" in text.lower()
 
 
+def test_help_texts_cover_how_it_works_and_faq():
+    how_it_works = ui.build_how_it_works_text()
+    faq = ui.build_faq_text()
+
+    assert "получаете персональную ссылку" in how_it_works.lower()
+    assert "по первой ссылке" in how_it_works.lower()
+    assert "faq" in faq.lower()
+    assert "отрицательным" in faq.lower()
+
+
 def test_catalog_text_contains_site_and_categories():
     text = ui.build_catalog_text()
 
@@ -172,6 +184,14 @@ def test_balance_text_contains_amount():
     assert "1 мерч-бонус = 1 BYN" in text
 
 
+def test_negative_balance_text_explains_reversal_case():
+    text = ui.build_balance_text(balance="-40.00")
+
+    assert "-40.00" in text
+    assert "отрицательный" in text.lower()
+    assert "аннулированы" in text.lower()
+
+
 def test_bonus_history_texts_are_present():
     empty_text = ui.build_empty_bonus_history_text()
     filled_text = ui.build_bonus_history_text(
@@ -180,7 +200,8 @@ def test_bonus_history_texts_are_present():
 
     assert "истории бонусов нет операций" in empty_text.lower()
     assert "история бонусов" in filled_text.lower()
-    assert "подтверждённые операции" in filled_text.lower()
+    assert "аннулирования" in filled_text.lower()
+    assert "ручные корректировки" in filled_text.lower()
 
 
 def test_empty_invited_text_contains_hint():

@@ -1,8 +1,14 @@
 from django.contrib import admin
 from decimal import Decimal
+import csv
+from django.http import HttpResponse
+from django.urls import reverse
 
 from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
 from apps.common.choices import (
+    BONUS_ENTRY_TYPE_ACCRUAL,
+    BONUS_ENTRY_TYPE_MANUAL_ADJUSTMENT,
+    BONUS_ENTRY_TYPE_REVERSAL,
     LEAD_STATUS_BONUS_CONFIRMED,
     LEAD_STATUS_IN_PROGRESS,
     LEAD_STATUS_ORDERED,
@@ -10,11 +16,13 @@ from apps.common.choices import (
     SPEND_REQUEST_STATUS_APPROVED,
     SPEND_REQUEST_STATUS_PENDING,
     SPEND_REQUEST_STATUS_REJECTED,
+    get_bonus_entry_type_label,
     get_lead_status_label,
     get_spend_request_status_label,
 )
 from apps.referrals.models import ReferralLead, ReferralLink
 from apps.users.models import Participant
+from apps.bot.services import calculate_participant_balance
 
 admin.site.site_header = "\u0410\u0434\u043c\u0438\u043d\u043a\u0430 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u044b \u043b\u043e\u044f\u043b\u044c\u043d\u043e\u0441\u0442\u0438"
 admin.site.site_title = "\u0410\u0434\u043c\u0438\u043d\u043a\u0430 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u044b \u043b\u043e\u044f\u043b\u044c\u043d\u043e\u0441\u0442\u0438"
@@ -101,6 +109,16 @@ class AdminMemoMixin:
         )
 
 
+def build_csv_response(*, filename: str, header: list[str], rows: list[list[str]]) -> HttpResponse:
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response.write("\ufeff")
+    writer = csv.writer(response, delimiter=";")
+    writer.writerow(header)
+    writer.writerows(rows)
+    return response
+
+
 @admin.register(Participant)
 class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
     list_display = (
@@ -118,6 +136,7 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
     )
     search_fields = ("full_name", "company", "position", "phone", "telegram_id")
     list_filter = ("consent_accepted", "is_primary_contact", "created_at")
+    actions = ("export_selected_to_csv",)
     list_per_page = 25
     ordering = ("-created_at",)
     readonly_fields = ("created_at", "bonus_balance", "invited_leads_count", "spend_requests_count")
@@ -142,6 +161,8 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
                     ("Запросов на списание", self.spend_requests_count(obj)),
                 ),
             }
+            context["admin_action_links"] = self.build_participant_action_links(obj)
+            context["admin_history_timeline"] = self.build_participant_history_timeline(obj)
         return super().render_change_form(
             request,
             context,
@@ -151,14 +172,47 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
             obj=obj,
         )
 
+    def build_participant_action_links(self, obj: Participant) -> tuple[dict, ...]:
+        links = [
+            {
+                "title": "Найти участника по телефону",
+                "url": f"{reverse('admin:users_participant_changelist')}?q={obj.phone}",
+            },
+        ]
+        if obj.company:
+            links.append(
+                {
+                    "title": "Найти участников этой компании",
+                    "url": f"{reverse('admin:users_participant_changelist')}?q={obj.company}",
+                }
+            )
+            links.append(
+                {
+                    "title": "Найти заявки этой компании",
+                    "url": f"{reverse('admin:referrals_referrallead_changelist')}?q={obj.company}",
+                }
+            )
+        return tuple(links)
+
+    def build_participant_history_timeline(self, obj: Participant) -> tuple[str, ...]:
+        history_lines = []
+        for entry in BonusLedgerEntry.objects.filter(participant=obj).order_by("-created_at")[:5]:
+            history_lines.append(
+                f"{entry.created_at:%d.%m.%Y} — {get_bonus_entry_type_label(entry.entry_type)}: "
+                f"{entry.amount:.2f} — {entry.reason}"
+            )
+        for spend_request in BonusSpendRequest.objects.filter(participant=obj).order_by("-created_at")[:5]:
+            history_lines.append(
+                f"{spend_request.created_at:%d.%m.%Y} — Запрос на списание: "
+                f"{spend_request.amount:.2f} — {spend_request.comment or 'без комментария'} "
+                f"({get_spend_request_status_label(spend_request.status)})"
+            )
+        history_lines.sort(reverse=True)
+        return tuple(history_lines[:6]) or ("Пока операций и запросов нет.",)
+
     @admin.display(description="Бонусы")
     def bonus_balance(self, obj: Participant) -> Decimal:
-        accrued = BonusLedgerEntry.objects.filter(participant=obj).values_list("amount", flat=True)
-        spent = BonusSpendRequest.objects.filter(
-            participant=obj,
-            status=SPEND_REQUEST_STATUS_PENDING,
-        ).values_list("amount", flat=True)
-        return sum(accrued, Decimal("0.00")) - sum(spent, Decimal("0.00"))
+        return calculate_participant_balance(participant=obj)
 
     @admin.display(description="Приглашено")
     def invited_leads_count(self, obj: Participant) -> int:
@@ -175,6 +229,37 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
     def spend_requests_count(self, obj: Participant) -> int:
         return BonusSpendRequest.objects.filter(participant=obj).count()
 
+    @admin.action(description="Выгрузить выбранных участников в CSV")
+    def export_selected_to_csv(self, request, queryset):
+        rows = []
+        for participant in queryset.order_by("-created_at"):
+            rows.append(
+                [
+                    participant.full_name,
+                    participant.company,
+                    participant.position,
+                    participant.phone,
+                    participant.telegram_id,
+                    "Да" if participant.is_primary_contact else "Нет",
+                    f"{self.bonus_balance(participant):.2f}",
+                    participant.created_at.strftime("%d.%m.%Y %H:%M"),
+                ]
+            )
+        return build_csv_response(
+            filename="participants_export.csv",
+            header=[
+                "Участник",
+                "Компания",
+                "Должность",
+                "Телефон",
+                "Telegram ID",
+                "Основной контакт",
+                "Баланс",
+                "Дата регистрации",
+            ],
+            rows=rows,
+        )
+
 
 @admin.register(ReferralLead)
 class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
@@ -183,24 +268,39 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
         "client_company",
         "client_name",
         "client_phone",
+        "product_interest",
         "referrer_name",
         "referrer_company",
         "status_label",
         "created_at",
     )
-    search_fields = ("client_company", "client_name", "client_phone", "referral_link__participant__full_name")
+    search_fields = (
+        "client_company",
+        "client_name",
+        "client_phone",
+        "client_email",
+        "product_interest",
+        "referral_link__participant__full_name",
+    )
     list_filter = ("status", "created_at", ReferralLeadSourceFilter, HasAdminCommentFilter)
     autocomplete_fields = ("referral_link",)
     list_select_related = ("referral_link__participant",)
     list_per_page = 25
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
-    actions = ("mark_as_in_progress", "mark_as_ordered", "mark_as_bonus_confirmed", "mark_as_rejected")
+    actions = (
+        "mark_as_in_progress",
+        "mark_as_ordered",
+        "mark_as_bonus_confirmed",
+        "mark_as_rejected",
+        "export_selected_to_csv",
+    )
     readonly_fields = ("lead_type_label", "referrer_name", "referrer_company", "created_at")
     fieldsets = (
-        ("Клиент", {"fields": ("client_company", "client_name", "client_phone")}),
+        ("Клиент", {"fields": ("client_company", "client_name", "client_phone", "client_position", "client_email")}),
+        ("Запрос", {"fields": ("product_interest", "quantity", "budget", "deadline")}),
         ("Источник", {"fields": ("lead_type_label", "referral_link", "referrer_name", "referrer_company")}),
-        ("Обработка", {"fields": ("status", "admin_comment", "created_at")}),
+        ("Обработка", {"fields": ("status", "rejection_reason", "admin_comment", "created_at")}),
     )
     memo_title = "Проверка реферальной заявки"
     memo_intro = "Перед подтверждением проверьте, что клиент действительно подходит под правила программы."
@@ -221,12 +321,22 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
                     ("Клиент", obj.client_name or "Не указан"),
                     ("Компания", obj.client_company or "Не указана"),
                     ("Телефон", obj.client_phone or "Не указан"),
+                    ("Должность", obj.client_position or "Не указана"),
+                    ("Email", obj.client_email or "Не указан"),
+                    ("Продукция", obj.product_interest or "Не указана"),
+                    ("Тираж", obj.quantity or "Не указан"),
+                    ("Бюджет", obj.budget or "Не указан"),
+                    ("Срок", obj.deadline or "Не указан"),
                     ("Кто пригласил", self.referrer_name(obj)),
                     ("Компания пригласившего", self.referrer_company(obj)),
                     ("Статус заявки", get_lead_status_label(obj.status)),
                     ("Комментарий администратора", obj.admin_comment or "Комментарий пока не добавлен"),
+                    ("Причина отказа", obj.rejection_reason or "Пока не указана"),
+                    ("Возможные дубли по телефону", self.phone_duplicates_count(obj)),
+                    ("Возможные дубли по компании", self.company_duplicates_count(obj)),
                 ),
             }
+            context["admin_action_links"] = self.build_lead_action_links(obj)
         return super().render_change_form(
             request,
             context,
@@ -256,6 +366,37 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
     def status_label(self, obj: ReferralLead) -> str:
         return get_lead_status_label(obj.status)
 
+    def phone_duplicates_count(self, obj: ReferralLead) -> int:
+        return ReferralLead.objects.filter(client_phone=obj.client_phone).exclude(pk=obj.pk).count()
+
+    def company_duplicates_count(self, obj: ReferralLead) -> int:
+        if not obj.client_company:
+            return 0
+        return ReferralLead.objects.filter(client_company=obj.client_company).exclude(pk=obj.pk).count()
+
+    def build_lead_action_links(self, obj: ReferralLead) -> tuple[dict, ...]:
+        links = [
+            {
+                "title": "Найти заявки по телефону",
+                "url": f"{reverse('admin:referrals_referrallead_changelist')}?q={obj.client_phone}",
+            }
+        ]
+        if obj.client_company:
+            links.append(
+                {
+                    "title": "Найти заявки по компании",
+                    "url": f"{reverse('admin:referrals_referrallead_changelist')}?q={obj.client_company}",
+                }
+            )
+        if obj.referral_link:
+            links.append(
+                {
+                    "title": "Открыть пригласившего участника",
+                    "url": reverse("admin:users_participant_change", args=[obj.referral_link.participant.pk]),
+                }
+            )
+        return tuple(links)
+
     @admin.action(description="Перевести в статус «В работе»")
     def mark_as_in_progress(self, request, queryset):
         queryset.update(status=LEAD_STATUS_IN_PROGRESS)
@@ -272,6 +413,51 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
     def mark_as_rejected(self, request, queryset):
         queryset.update(status=LEAD_STATUS_REJECTED)
 
+    @admin.action(description="Выгрузить выбранные заявки в CSV")
+    def export_selected_to_csv(self, request, queryset):
+        rows = []
+        for lead in queryset.order_by("-created_at"):
+            rows.append(
+                [
+                    self.lead_type_label(lead),
+                    lead.client_name,
+                    lead.client_company,
+                    lead.client_phone,
+                    lead.client_position,
+                    lead.client_email,
+                    lead.product_interest,
+                    lead.quantity,
+                    lead.budget,
+                    lead.deadline,
+                    self.referrer_name(lead),
+                    get_lead_status_label(lead.status),
+                    lead.rejection_reason,
+                    lead.admin_comment,
+                    lead.created_at.strftime("%d.%m.%Y %H:%M"),
+                ]
+            )
+        return build_csv_response(
+            filename="referral_leads_export.csv",
+            header=[
+                "Тип заявки",
+                "Клиент",
+                "Компания",
+                "Телефон",
+                "Должность",
+                "Email",
+                "Продукция",
+                "Тираж",
+                "Бюджет",
+                "Срок",
+                "Кто пригласил",
+                "Статус",
+                "Причина отказа",
+                "Комментарий администратора",
+                "Дата создания",
+            ],
+            rows=rows,
+        )
+
 
 @admin.register(ReferralLink)
 class ReferralLinkAdmin(admin.ModelAdmin):
@@ -283,27 +469,32 @@ class ReferralLinkAdmin(admin.ModelAdmin):
 
 @admin.register(BonusLedgerEntry)
 class BonusLedgerEntryAdmin(AdminMemoMixin, admin.ModelAdmin):
-    list_display = ("participant", "amount", "reason", "lead", "created_at")
+    list_display = ("participant", "entry_type_label", "amount", "reason", "expires_at", "lead", "created_at")
     search_fields = ("participant__full_name", "reason", "lead__client_name")
-    list_filter = ("created_at",)
+    list_filter = ("entry_type", "created_at")
     autocomplete_fields = ("participant", "lead")
     list_select_related = ("participant", "lead")
     list_per_page = 25
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
-    readonly_fields = ("created_at",)
+    readonly_fields = ("created_at", "expiration_warning_sent_at")
     fieldsets = (
-        ("Начисление", {"fields": ("participant", "amount", "reason", "lead", "created_at")}),
+        ("Операция", {"fields": ("participant", "entry_type", "amount", "reason", "lead", "expires_at", "expiration_warning_sent_at", "created_at")}),
     )
-    memo_title = "Проверка начисления бонусов"
-    memo_intro = "Начисление делается только после ручной проверки условий сделки."
+    memo_title = "Проверка бонусной операции"
+    memo_intro = "Любая бонусная операция проводится вручную и должна соответствовать правилам программы."
     memo_items = (
         "Проверьте, что заказ оплачен и отгружен.",
         "Проверьте сумму заказа: бонусы не начисляются по заказам ниже 2000 BYN.",
         "Проверьте, что заказ не тендерный, не низкомаржинальный и без скидки или спецусловий.",
         "Если заказ компании делает несколько участников, бонус за заказ компании идёт основному контакту.",
+        "При аннулировании после возврата или отмены баланс участника может стать отрицательным — это допустимо.",
     )
-    memo_note = "Главный принцип: сначала проверить экономику сделки, потом начислять бонус."
+    memo_note = "Главный принцип: сначала проверить основание операции, потом подтверждать запись в журнале."
+
+    @admin.display(description="Тип операции")
+    def entry_type_label(self, obj: BonusLedgerEntry) -> str:
+        return get_bonus_entry_type_label(obj.entry_type)
 
 
 @admin.register(BonusSpendRequest)

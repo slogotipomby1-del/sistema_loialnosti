@@ -2,7 +2,15 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from apps.bot.handlers.support import SupportStates, handle_support_message, open_help_menu, start_support
+from apps.bot.handlers.support import (
+    SupportStates,
+    handle_support_message,
+    open_faq,
+    open_help_menu,
+    open_how_it_works,
+    open_rules,
+    start_support,
+)
 
 
 class FakeState:
@@ -27,6 +35,39 @@ def test_open_help_menu_returns_intro():
     sent_text = message.answer.await_args.args[0].lower()
     assert "правила" in sent_text
     assert "администратор" in sent_text
+
+
+def test_open_how_it_works_returns_program_explanation():
+    message = AsyncMock()
+
+    asyncio.run(open_how_it_works(message))
+
+    message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0].lower()
+    assert "как работает программа" in sent_text
+    assert "персональную ссылку" in sent_text
+
+
+def test_open_rules_returns_rules_text():
+    message = AsyncMock()
+
+    asyncio.run(open_rules(message))
+
+    message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0].lower()
+    assert "короткие правила программы" in sent_text
+    assert "2000 byn" in sent_text
+
+
+def test_open_faq_returns_common_questions():
+    message = AsyncMock()
+
+    asyncio.run(open_faq(message))
+
+    message.answer.assert_awaited_once()
+    sent_text = message.answer.await_args.args[0].lower()
+    assert "faq" in sent_text
+    assert "отрицательным" in sent_text
 
 
 def test_start_support_asks_for_message():

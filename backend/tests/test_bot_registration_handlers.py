@@ -154,7 +154,7 @@ def test_handle_bonus_history_returns_empty_state(monkeypatch):
 
     monkeypatch.setattr(
         "apps.bot.handlers.member.get_participant_bonus_history_data",
-        lambda **kwargs: {"accruals": [], "spendings": []},
+        lambda **kwargs: {"entries": []},
     )
 
     asyncio.run(handle_bonus_history(message))
@@ -170,8 +170,20 @@ def test_handle_bonus_history_returns_operations(monkeypatch):
     monkeypatch.setattr(
         "apps.bot.handlers.member.get_participant_bonus_history_data",
         lambda **kwargs: {
-            "accruals": [(60, "За рекомендацию", datetime(2026, 7, 10))],
-            "spendings": [(40, "Термокружка", datetime(2026, 7, 11))],
+            "entries": [
+                {
+                    "label": "Начисление",
+                    "amount": 60,
+                    "reason": "За рекомендацию",
+                    "created_at": datetime(2026, 7, 10),
+                },
+                {
+                    "label": "Списание",
+                    "amount": 40,
+                    "reason": "Термокружка",
+                    "created_at": datetime(2026, 7, 11),
+                },
+            ],
         },
     )
 

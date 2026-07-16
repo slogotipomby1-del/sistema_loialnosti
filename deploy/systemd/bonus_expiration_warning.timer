@@ -1,0 +1,9 @@
+[Unit]
+Description=Run Referral MVP bonus expiration warnings daily
+
+[Timer]
+OnCalendar=*-*-* 10:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

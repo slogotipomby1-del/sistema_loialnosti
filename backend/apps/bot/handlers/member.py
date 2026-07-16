@@ -178,16 +178,12 @@ async def handle_bonus_history(message: Message) -> None:
 
     history_lines = []
 
-    for amount, reason, created_at in history_data["accruals"]:
-        title = reason or "начисление бонусов"
+    for entry in history_data["entries"]:
+        amount = entry["amount"]
+        title = entry["reason"]
+        sign = "+" if amount >= 0 else ""
         history_lines.append(
-            f"— Начисление: +{amount:.2f} — {title} — {created_at:%d.%m.%Y}"
-        )
-
-    for amount, comment, created_at in history_data["spendings"]:
-        title = comment or "списание бонусов"
-        history_lines.append(
-            f"— Списание: -{amount:.2f} — {title} — {created_at:%d.%m.%Y}"
+            f"— {entry['label']}: {sign}{amount:.2f} — {title} — {entry['created_at']:%d.%m.%Y}"
         )
 
     if not history_lines:

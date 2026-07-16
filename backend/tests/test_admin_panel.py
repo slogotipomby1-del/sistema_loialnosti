@@ -5,8 +5,10 @@ from django.urls import reverse
 
 from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
 from apps.common.choices import (
+    BONUS_ENTRY_TYPE_REVERSAL,
     LEAD_STATUS_BONUS_CONFIRMED,
     LEAD_STATUS_IN_PROGRESS,
+    LEAD_STATUS_NEW,
     LEAD_STATUS_ORDERED,
     LEAD_STATUS_REJECTED,
     SPEND_REQUEST_STATUS_PENDING,
@@ -25,6 +27,7 @@ def test_referral_lead_admin_has_main_columns():
         "client_company",
         "client_name",
         "client_phone",
+        "product_interest",
         "referrer_name",
         "referrer_company",
         "status_label",
@@ -71,6 +74,7 @@ def test_participant_admin_has_useful_dashboard_columns():
     assert admin_instance.ordering == ("-created_at",)
     assert admin_instance.list_per_page == 25
     assert admin_instance.readonly_fields == ("created_at", "bonus_balance", "invited_leads_count", "spend_requests_count")
+    assert "export_selected_to_csv" in admin_instance.actions
 
 
 def test_referral_lead_admin_has_helpful_list_settings():
@@ -85,6 +89,7 @@ def test_referral_lead_admin_has_helpful_list_settings():
     assert admin_instance.list_per_page == 25
     assert filter_names == ("status", "created_at", "lead_source", "has_admin_comment")
     assert admin_instance.readonly_fields == ("lead_type_label", "referrer_name", "referrer_company", "created_at")
+    assert "export_selected_to_csv" in admin_instance.actions
 
 
 def test_bonus_spend_request_admin_has_helpful_list_settings():
@@ -137,7 +142,7 @@ def test_participant_admin_dashboard_counters_are_calculated():
 
     admin_instance = site._registry[Participant]
 
-    assert str(admin_instance.bonus_balance(participant)) == "80.00"
+    assert str(admin_instance.bonus_balance(participant)) == "120.00"
     assert admin_instance.invited_leads_count(participant) == 1
     assert admin_instance.spend_requests_count(participant) == 1
 
@@ -271,6 +276,33 @@ def test_referral_lead_admin_shows_type_and_referrer_company():
 
 
 @pytest.mark.django_db
+def test_referral_lead_admin_counts_possible_duplicates():
+    participant = Participant.objects.create(
+        telegram_id="tg-admin-dup",
+        full_name="Ольга",
+        phone="+375299111112",
+        consent_accepted=True,
+    )
+    referral_link = ReferralLink.objects.create(code="dup-ref", participant=participant)
+    lead = ReferralLead.objects.create(
+        referral_link=referral_link,
+        client_company="ООО Клиент",
+        client_name="Иван",
+        client_phone="+375299000001",
+    )
+    ReferralLead.objects.create(
+        referral_link=None,
+        client_company="ООО Клиент",
+        client_name="Мария",
+        client_phone="+375299000001",
+    )
+    admin_instance = site._registry[ReferralLead]
+
+    assert admin_instance.phone_duplicates_count(lead) == 1
+    assert admin_instance.company_duplicates_count(lead) == 1
+
+
+@pytest.mark.django_db
 def test_bonus_spend_request_admin_bulk_actions_update_statuses():
     participant = Participant.objects.create(
         telegram_id="tg-admin-2",
@@ -312,3 +344,100 @@ def test_bonus_spend_request_admin_shows_participant_company():
     admin_instance = site._registry[BonusSpendRequest]
 
     assert admin_instance.participant_company(request_obj) == "ООО Альфа"
+
+
+def test_bonus_ledger_entry_admin_has_operation_type_column():
+    admin_instance = site._registry[BonusLedgerEntry]
+
+    assert admin_instance.list_display == (
+        "participant",
+        "entry_type_label",
+        "amount",
+        "reason",
+        "expires_at",
+        "lead",
+        "created_at",
+    )
+
+
+@pytest.mark.django_db
+def test_participant_admin_balance_can_be_negative_after_reversal_and_approved_spending():
+    participant = Participant.objects.create(
+        telegram_id="tg-admin-8",
+        full_name="Наталья",
+        phone="+375291111119",
+        consent_accepted=True,
+    )
+    BonusLedgerEntry.objects.create(
+        participant=participant,
+        amount="100.00",
+        reason="Начисление",
+    )
+    BonusLedgerEntry.objects.create(
+        participant=participant,
+        amount="-70.00",
+        reason="Аннулирование",
+        entry_type=BONUS_ENTRY_TYPE_REVERSAL,
+    )
+    BonusSpendRequest.objects.create(
+        participant=participant,
+        amount="50.00",
+        comment="Подарок",
+        status=SPEND_REQUEST_STATUS_APPROVED,
+    )
+    admin_instance = site._registry[Participant]
+
+    assert str(admin_instance.bonus_balance(participant)) == "-20.00"
+
+
+@pytest.mark.django_db
+def test_participant_admin_can_export_selected_to_csv():
+    participant = Participant.objects.create(
+        telegram_id="tg-export-1",
+        full_name="Ирина",
+        phone="+375291111118",
+        company="ООО Экспорт",
+        position="Маркетолог",
+        consent_accepted=True,
+    )
+    admin_instance = site._registry[Participant]
+    request = RequestFactory().post("/admin/users/participant/")
+
+    response = admin_instance.export_selected_to_csv(request, Participant.objects.filter(pk=participant.pk))
+
+    assert response.status_code == 200
+    assert response["Content-Disposition"] == 'attachment; filename="participants_export.csv"'
+    content = response.content.decode("utf-8")
+    assert "Ирина" in content
+    assert "ООО Экспорт" in content
+
+
+@pytest.mark.django_db
+def test_referral_lead_admin_can_export_selected_to_csv():
+    participant = Participant.objects.create(
+        telegram_id="tg-export-2",
+        full_name="Ольга",
+        phone="+375291111117",
+        consent_accepted=True,
+    )
+    link = ReferralLink.objects.create(code="export-link", participant=participant)
+    lead = ReferralLead.objects.create(
+        referral_link=link,
+        client_company="ООО Клиент",
+        client_name="Иван",
+        client_phone="+375291111116",
+        client_email="ivan@example.com",
+        product_interest="Рюкзаки",
+        status=LEAD_STATUS_NEW,
+    )
+    admin_instance = site._registry[ReferralLead]
+    request = RequestFactory().post("/admin/referrals/referrallead/")
+
+    response = admin_instance.export_selected_to_csv(request, ReferralLead.objects.filter(pk=lead.pk))
+
+    assert response.status_code == 200
+    assert response["Content-Disposition"] == 'attachment; filename="referral_leads_export.csv"'
+    content = response.content.decode("utf-8")
+    assert "Иван" in content
+    assert "ivan@example.com" in content
+    assert "Рюкзаки" in content

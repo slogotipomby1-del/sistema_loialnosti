@@ -58,10 +58,23 @@ python manage.py createsuperuser
 ```bash
 cp /opt/sistema_loialnosti/deploy/systemd/referral_admin.service /etc/systemd/system/referral_admin.service
 cp /opt/sistema_loialnosti/deploy/systemd/referral_bot.service /etc/systemd/system/referral_bot.service
+cp /opt/sistema_loialnosti/deploy/systemd/bonus_expiration_warning.service /etc/systemd/system/bonus_expiration_warning.service
+cp /opt/sistema_loialnosti/deploy/systemd/bonus_expiration_warning.timer /etc/systemd/system/bonus_expiration_warning.timer
+cp /opt/sistema_loialnosti/deploy/systemd/bonus_expiration.service /etc/systemd/system/bonus_expiration.service
+cp /opt/sistema_loialnosti/deploy/systemd/bonus_expiration.timer /etc/systemd/system/bonus_expiration.timer
 systemctl daemon-reload
 systemctl enable --now referral_admin
 systemctl enable --now referral_bot
+systemctl enable --now bonus_expiration_warning.timer
+systemctl enable --now bonus_expiration.timer
 ```
+
+Что это даёт:
+
+- каждый день в 10:00 отправляются предупреждения участникам, у кого бонусы сгорят через 30 дней
+- каждый день в 10:15 система проводит сгорание просроченных бонусов
+
+При желании время можно поменять прямо в `.timer` файлах.
 
 ## Nginx
 
@@ -80,7 +93,19 @@ systemctl restart nginx
 systemctl status referral_admin --no-pager
 systemctl status referral_bot --no-pager
 systemctl status nginx --no-pager
+systemctl status bonus_expiration_warning.timer --no-pager
+systemctl status bonus_expiration.timer --no-pager
+systemctl list-timers --all | grep bonus_expiration
 ss -tlnp | grep :80
+```
+
+Ручная проверка новых команд:
+
+```bash
+cd /opt/sistema_loialnosti/backend
+source .venv/bin/activate
+python manage.py send_bonus_expiration_warnings
+python manage.py expire_bonus_entries
 ```
 
 ## Firewall в DigitalOcean

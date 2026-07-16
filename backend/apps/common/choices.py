@@ -26,6 +26,20 @@ SPEND_REQUEST_STATUS_LABELS = {
 
 SPEND_REQUEST_STATUS_CHOICES = list(SPEND_REQUEST_STATUS_LABELS.items())
 
+BONUS_ENTRY_TYPE_ACCRUAL = "accrual"
+BONUS_ENTRY_TYPE_REVERSAL = "reversal"
+BONUS_ENTRY_TYPE_EXPIRATION = "expiration"
+BONUS_ENTRY_TYPE_MANUAL_ADJUSTMENT = "manual_adjustment"
+
+BONUS_ENTRY_TYPE_LABELS = {
+    BONUS_ENTRY_TYPE_ACCRUAL: "Начисление",
+    BONUS_ENTRY_TYPE_REVERSAL: "Аннулирование",
+    BONUS_ENTRY_TYPE_EXPIRATION: "Сгорание",
+    BONUS_ENTRY_TYPE_MANUAL_ADJUSTMENT: "Ручная корректировка",
+}
+
+BONUS_ENTRY_TYPE_CHOICES = list(BONUS_ENTRY_TYPE_LABELS.items())
+
 
 def get_lead_status_label(status: str) -> str:
     return LEAD_STATUS_LABELS.get(status, status)
@@ -33,3 +47,7 @@ def get_lead_status_label(status: str) -> str:
 
 def get_spend_request_status_label(status: str) -> str:
     return SPEND_REQUEST_STATUS_LABELS.get(status, status)
+
+
+def get_bonus_entry_type_label(entry_type: str) -> str:
+    return BONUS_ENTRY_TYPE_LABELS.get(entry_type, entry_type)

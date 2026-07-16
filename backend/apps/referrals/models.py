@@ -31,12 +31,19 @@ class ReferralLead(models.Model):
     client_company = models.CharField(max_length=255, blank=True, default="")
     client_name = models.CharField(max_length=255)
     client_phone = models.CharField(max_length=32)
+    client_position = models.CharField(max_length=255, blank=True, default="")
+    client_email = models.EmailField(blank=True, default="")
+    product_interest = models.CharField(max_length=255, blank=True, default="")
+    quantity = models.CharField(max_length=255, blank=True, default="")
+    budget = models.CharField(max_length=255, blank=True, default="")
+    deadline = models.CharField(max_length=255, blank=True, default="")
     status = models.CharField(
         max_length=32,
         choices=LEAD_STATUS_CHOICES,
         default=LEAD_STATUS_NEW,
     )
     admin_comment = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -45,5 +45,47 @@
     </div>
   {% endif %}
 
+  {% if admin_action_links %}
+    <div data-testid="admin-action-links-card" style="margin-bottom: 20px; padding: 16px 18px; border: 1px solid #ead8b1; border-radius: 12px; background: linear-gradient(180deg, #fffdf7 0%, #fff7e8 100%); box-shadow: 0 1px 2px rgba(23, 43, 77, 0.08);">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <div style="width: 34px; height: 34px; border-radius: 999px; background: #b27d1f; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+          ↗
+        </div>
+        <div>
+          <h2 style="margin: 0; font-size: 20px;">Быстрые проверки</h2>
+          <p style="margin: 4px 0 0; color: #6b582f;">Ссылки для быстрой проверки дублей и связанных карточек.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+        {% for link in admin_action_links %}
+          <a href="{{ link.url }}" style="display: inline-flex; align-items: center; padding: 10px 14px; border-radius: 10px; text-decoration: none; color: #5a4415; background: #fff; border: 1px solid #efdba8; font-weight: 600;">
+            {{ link.title }}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if admin_history_timeline %}
+    <div data-testid="admin-history-card" style="margin-bottom: 20px; padding: 16px 18px; border: 1px solid #ddd7f5; border-radius: 12px; background: linear-gradient(180deg, #fbfaff 0%, #f4f2fd 100%); box-shadow: 0 1px 2px rgba(23, 43, 77, 0.08);">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <div style="width: 34px; height: 34px; border-radius: 999px; background: #6d56a5; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+          ≡
+        </div>
+        <div>
+          <h2 style="margin: 0; font-size: 20px;">История участника</h2>
+          <p style="margin: 4px 0 0; color: #54437d;">Последние операции и запросы по участнику.</p>
+        </div>
+      </div>
+
+      <ul style="margin: 0 0 0 20px; padding: 0;">
+        {% for item in admin_history_timeline %}
+          <li style="margin-bottom: 8px; white-space: pre-line;">{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
   {{ block.super }}
 {% endblock %}

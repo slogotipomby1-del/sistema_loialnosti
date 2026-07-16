@@ -18,8 +18,15 @@ def test_lead_created_from_referral_keeps_referrer_relation():
         client_name="OOO Client",
         client_phone="+375291234567",
         client_company="OOO Client",
+        client_position="Маркетолог",
+        client_email="client@example.com",
+        product_interest="Welcome pack",
+        quantity="200",
+        budget="до 5000 BYN",
+        deadline="2 недели",
         status="new",
     )
 
     assert lead.referral_link.participant == participant
     assert lead.client_company == "OOO Client"
+    assert lead.client_email == "client@example.com"

@@ -45,10 +45,13 @@ def test_referral_lead_change_page_shows_client_card_and_memo(client, admin_user
     content = response.content.decode("utf-8")
     assert 'data-testid="admin-client-card"' in content
     assert 'data-testid="admin-change-memo-card"' in content
+    assert 'data-testid="admin-action-links-card"' in content
     assert "Карточка клиента" in content
     assert "Проверка реферальной заявки" in content
     assert "Тип заявки" in content
     assert "Компания пригласившего" in content
+    assert "Возможные дубли по телефону" in content
+    assert "Найти заявки по телефону" in content
 
 
 @pytest.mark.django_db
@@ -72,8 +75,12 @@ def test_participant_change_page_shows_profile_card(client, admin_user, sample_p
     assert response.status_code == 200
     content = response.content.decode("utf-8")
     assert 'data-testid="admin-client-card"' in content
+    assert 'data-testid="admin-action-links-card"' in content
+    assert 'data-testid="admin-history-card"' in content
     assert "Карточка участника" in content
     assert "Доступно бонусов" in content
+    assert "История участника" in content
+    assert "Запрос на списание" in content
 
 
 @pytest.mark.django_db
@@ -101,7 +108,8 @@ def test_bonus_entry_change_page_shows_memo(client, admin_user, sample_participa
     assert response.status_code == 200
     content = response.content.decode("utf-8")
     assert 'data-testid="admin-change-memo-card"' in content
-    assert "Проверка начисления бонусов" in content
+    assert "Проверка бонусной операции" in content
+    assert "отрицательным" in content
 
 
 @pytest.mark.django_db

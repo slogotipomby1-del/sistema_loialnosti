@@ -2,7 +2,14 @@ import secrets
 from decimal import Decimal
 
 from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
-from apps.common.choices import SPEND_REQUEST_STATUS_APPROVED, SPEND_REQUEST_STATUS_PENDING
+from apps.common.choices import (
+    BONUS_ENTRY_TYPE_ACCRUAL,
+    BONUS_ENTRY_TYPE_EXPIRATION,
+    BONUS_ENTRY_TYPE_MANUAL_ADJUSTMENT,
+    BONUS_ENTRY_TYPE_REVERSAL,
+    SPEND_REQUEST_STATUS_APPROVED,
+    SPEND_REQUEST_STATUS_PENDING,
+)
 from apps.notifications import telegram as telegram_notifications
 from apps.referrals.models import ReferralLead, ReferralLink
 from apps.users.models import Participant
@@ -60,19 +67,28 @@ def update_participant_profile(*, telegram_id: str, company: str = "", position:
     return participant
 
 
+def calculate_participant_balance(*, participant: Participant) -> Decimal:
+    ledger_total = sum(
+        BonusLedgerEntry.objects.filter(participant=participant).values_list("amount", flat=True),
+        Decimal("0.00"),
+    )
+    approved_spending_total = sum(
+        BonusSpendRequest.objects.filter(
+            participant=participant,
+            status=SPEND_REQUEST_STATUS_APPROVED,
+        ).values_list("amount", flat=True),
+        Decimal("0.00"),
+    )
+    return ledger_total - approved_spending_total
+
+
 def get_participant_dashboard_data(*, telegram_id: str):
     participant = Participant.objects.filter(telegram_id=telegram_id).first()
     if not participant:
         return None
 
     referral_link = ReferralLink.objects.get(participant=participant)
-    accrued = BonusLedgerEntry.objects.filter(participant=participant).values_list("amount", flat=True)
-    spent = BonusSpendRequest.objects.filter(
-        participant=participant,
-        status=SPEND_REQUEST_STATUS_PENDING,
-    ).values_list("amount", flat=True)
-
-    balance = sum(accrued, Decimal("0.00")) - sum(spent, Decimal("0.00"))
+    balance = calculate_participant_balance(participant=participant)
 
     invited_leads = list(
         ReferralLead.objects.filter(referral_link=referral_link)
@@ -120,23 +136,49 @@ def get_participant_bonus_history_data(*, telegram_id: str):
     if not participant:
         return None
 
-    accruals = list(
+    history_entries = []
+
+    for amount, reason, entry_type, created_at in (
         BonusLedgerEntry.objects.filter(participant=participant)
         .order_by("-created_at")
-        .values_list("amount", "reason", "created_at")
-    )
-    spendings = list(
+        .values_list("amount", "reason", "entry_type", "created_at")
+    ):
+        entry_label = {
+            BONUS_ENTRY_TYPE_ACCRUAL: "Начисление",
+            BONUS_ENTRY_TYPE_REVERSAL: "Аннулирование",
+            BONUS_ENTRY_TYPE_EXPIRATION: "Сгорание",
+            BONUS_ENTRY_TYPE_MANUAL_ADJUSTMENT: "Ручная корректировка",
+        }[entry_type]
+        history_entries.append(
+            {
+                "label": entry_label,
+                "amount": amount,
+                "reason": reason,
+                "created_at": created_at,
+            }
+        )
+
+    for amount, comment, created_at in (
         BonusSpendRequest.objects.filter(
             participant=participant,
             status=SPEND_REQUEST_STATUS_APPROVED,
         )
         .order_by("-created_at")
         .values_list("amount", "comment", "created_at")
-    )
+    ):
+        history_entries.append(
+            {
+                "label": "Списание",
+                "amount": amount,
+                "reason": comment or "списание бонусов",
+                "created_at": created_at,
+            }
+        )
+
+    history_entries.sort(key=lambda item: item["created_at"], reverse=True)
 
     return {
-        "accruals": accruals,
-        "spendings": spendings,
+        "entries": history_entries,
     }
 
 
@@ -146,6 +188,13 @@ def create_referral_lead(
     client_name: str,
     client_phone: str,
     client_company: str = "",
+    client_position: str = "",
+    client_email: str = "",
+    product_interest: str = "",
+    quantity: str = "",
+    budget: str = "",
+    deadline: str = "",
+    comment: str = "",
 ):
     referral_link = ReferralLink.objects.filter(code=referral_code).first() if referral_code else None
     lead = ReferralLead.objects.create(
@@ -153,10 +202,25 @@ def create_referral_lead(
         client_company=client_company,
         client_name=client_name,
         client_phone=client_phone,
+        client_position=client_position,
+        client_email=client_email,
+        product_interest=product_interest,
+        quantity=quantity,
+        budget=budget,
+        deadline=deadline,
+        admin_comment=comment,
     )
     company_line = f"\nКомпания: {client_company}" if client_company else ""
+    position_line = f"\nДолжность: {client_position}" if client_position else ""
+    email_line = f"\nEmail: {client_email}" if client_email else ""
+    product_line = f"\nПродукция: {product_interest}" if product_interest else ""
+    quantity_line = f"\nТираж: {quantity}" if quantity else ""
+    budget_line = f"\nБюджет: {budget}" if budget else ""
+    deadline_line = f"\nСрок: {deadline}" if deadline else ""
+    comment_line = f"\nКомментарий: {comment}" if comment else ""
     telegram_notifications.send_admin_notification(
-        f"Новая заявка:{company_line}\nКонтакт: {client_name}\nТелефон: {client_phone}"
+        f"Новая заявка:{company_line}{position_line}{email_line}{product_line}{quantity_line}{budget_line}{deadline_line}{comment_line}\n"
+        f"Контакт: {client_name}\nТелефон: {client_phone}"
     )
     return lead
 
@@ -170,7 +234,16 @@ def create_bonus_spend_request(*, participant, amount: Decimal, comment: str = "
     )
 
 
-def create_self_lead_request(*, telegram_id: str, product: str, quantity: str, comment: str):
+def create_self_lead_request(
+    *,
+    telegram_id: str,
+    product: str,
+    quantity: str,
+    budget: str,
+    deadline: str,
+    client_email: str,
+    comment: str,
+):
     participant = Participant.objects.get(telegram_id=telegram_id)
     participant_company = participant.company or "не указана"
     participant_position = participant.position or "не указана"
@@ -180,6 +253,9 @@ def create_self_lead_request(*, telegram_id: str, product: str, quantity: str, c
         f"Должность: {participant_position}\n"
         f"Продукция: {product}\n"
         f"Тираж: {quantity}\n"
+        f"Бюджет: {budget}\n"
+        f"Срок: {deadline}\n"
+        f"Email: {client_email or 'не указан'}\n"
         f"Комментарий: {comment}"
     )
     lead = ReferralLead.objects.create(
@@ -187,6 +263,12 @@ def create_self_lead_request(*, telegram_id: str, product: str, quantity: str, c
         client_company=participant.company,
         client_name=participant.full_name,
         client_phone=participant.phone,
+        client_position=participant.position,
+        client_email=client_email,
+        product_interest=product,
+        quantity=quantity,
+        budget=budget,
+        deadline=deadline,
         admin_comment=admin_comment,
     )
     telegram_notifications.send_admin_notification(
@@ -197,6 +279,9 @@ def create_self_lead_request(*, telegram_id: str, product: str, quantity: str, c
         f"Должность: {participant_position}\n"
         f"Продукция: {product}\n"
         f"Тираж: {quantity}\n"
+        f"Бюджет: {budget}\n"
+        f"Срок: {deadline}\n"
+        f"Email: {client_email or 'не указан'}\n"
         f"Комментарий: {comment}"
     )
     return lead

@@ -5,10 +5,16 @@ from aiogram.types import Message
 from asgiref.sync import sync_to_async
 
 from apps.bot.ui import (
+    FAQ_BUTTON_TEXT,
+    HOW_IT_WORKS_BUTTON_TEXT,
     MAIN_HELP_BUTTON_TEXT,
     SUPPORT_BUTTON_TEXT,
+    RULES_BUTTON_TEXT,
+    build_faq_text,
     build_help_intro_text,
     build_help_menu_keyboard,
+    build_how_it_works_text,
+    build_rules_text,
     build_support_prompt_text,
     build_support_sent_text,
 )
@@ -26,6 +32,30 @@ class SupportStates(StatesGroup):
 async def open_help_menu(message: Message) -> None:
     await message.answer(
         build_help_intro_text(),
+        reply_markup=build_help_menu_keyboard(),
+    )
+
+
+@router.message(F.text == HOW_IT_WORKS_BUTTON_TEXT)
+async def open_how_it_works(message: Message) -> None:
+    await message.answer(
+        build_how_it_works_text(),
+        reply_markup=build_help_menu_keyboard(),
+    )
+
+
+@router.message(F.text == RULES_BUTTON_TEXT)
+async def open_rules(message: Message) -> None:
+    await message.answer(
+        build_rules_text(),
+        reply_markup=build_help_menu_keyboard(),
+    )
+
+
+@router.message(F.text == FAQ_BUTTON_TEXT)
+async def open_faq(message: Message) -> None:
+    await message.answer(
+        build_faq_text(),
         reply_markup=build_help_menu_keyboard(),
     )
 

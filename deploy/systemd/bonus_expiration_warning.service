@@ -1,0 +1,11 @@
+[Unit]
+Description=Referral MVP bonus expiration warnings
+After=network.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/sistema_loialnosti/backend
+EnvironmentFile=/opt/sistema_loialnosti/.env
+ExecStart=/opt/sistema_loialnosti/backend/.venv/bin/python manage.py send_bonus_expiration_warnings

@@ -1,6 +1,8 @@
 from django.db import models
 
 from apps.common.choices import (
+    BONUS_ENTRY_TYPE_ACCRUAL,
+    BONUS_ENTRY_TYPE_CHOICES,
     SPEND_REQUEST_STATUS_CHOICES,
     SPEND_REQUEST_STATUS_PENDING,
 )
@@ -21,8 +23,15 @@ class BonusLedgerEntry(models.Model):
         on_delete=models.SET_NULL,
         related_name="bonus_entries",
     )
+    entry_type = models.CharField(
+        max_length=32,
+        choices=BONUS_ENTRY_TYPE_CHOICES,
+        default=BONUS_ENTRY_TYPE_ACCRUAL,
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     reason = models.CharField(max_length=255)
+    expires_at = models.DateField(null=True, blank=True)
+    expiration_warning_sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

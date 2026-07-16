@@ -5,7 +5,7 @@ from aiogram.types import Message
 from asgiref.sync import sync_to_async
 
 from apps.bot.services import create_self_lead_request
-from apps.bot.ui import OWN_COMPANY_ORDER_BUTTON_TEXT, build_cabinet_keyboard
+from apps.bot.ui import OWN_COMPANY_ORDER_BUTTON_TEXT, SKIP_BUTTON_TEXT, build_cabinet_keyboard, build_skip_keyboard
 
 
 router = Router(name="lead")
@@ -14,6 +14,9 @@ router = Router(name="lead")
 class LeadStates(StatesGroup):
     waiting_product = State()
     waiting_quantity = State()
+    waiting_budget = State()
+    waiting_deadline = State()
+    waiting_email = State()
     waiting_comment = State()
 
 
@@ -43,14 +46,60 @@ async def handle_lead_quantity(message: Message, state: FSMContext) -> None:
         return
 
     await state.update_data(quantity=quantity)
+    await state.set_state(LeadStates.waiting_budget)
+    await message.answer("Какой ориентировочно бюджет?")
+
+
+@router.message(LeadStates.waiting_budget)
+async def handle_lead_budget(message: Message, state: FSMContext) -> None:
+    budget = (message.text or "").strip()
+    if not budget:
+        await message.answer("Пожалуйста, напишите ориентировочный бюджет.")
+        return
+
+    await state.update_data(budget=budget)
+    await state.set_state(LeadStates.waiting_deadline)
+    await message.answer("Какой желаемый срок?")
+
+
+@router.message(LeadStates.waiting_deadline)
+async def handle_lead_deadline(message: Message, state: FSMContext) -> None:
+    deadline = (message.text or "").strip()
+    if not deadline:
+        await message.answer("Пожалуйста, напишите желаемый срок.")
+        return
+
+    await state.update_data(deadline=deadline)
+    await state.set_state(LeadStates.waiting_email)
+    await message.answer(
+        "Если хотите, укажите email для связи. Если не нужно — нажмите «Пропустить».",
+        reply_markup=build_skip_keyboard(),
+    )
+
+
+@router.message(LeadStates.waiting_email)
+async def handle_lead_email(message: Message, state: FSMContext) -> None:
+    email = (message.text or "").strip()
+    if email == SKIP_BUTTON_TEXT:
+        email = ""
+    elif not email:
+        await message.answer(
+            "Пожалуйста, укажите email или нажмите «Пропустить».",
+            reply_markup=build_skip_keyboard(),
+        )
+        return
+
+    await state.update_data(client_email=email)
     await state.set_state(LeadStates.waiting_comment)
-    await message.answer("Комментарий к заявке")
+    await message.answer("Комментарий к заявке", reply_markup=build_skip_keyboard())
 
 
 @router.message(LeadStates.waiting_comment)
 async def handle_lead_comment(message: Message, state: FSMContext) -> None:
     comment = (message.text or "").strip()
-    if not comment:
+    if comment == SKIP_BUTTON_TEXT:
+        comment = ""
+    elif not comment:
         await message.answer("Пожалуйста, добавьте комментарий к заявке.")
         return
 
@@ -59,6 +108,9 @@ async def handle_lead_comment(message: Message, state: FSMContext) -> None:
         telegram_id=str(message.from_user.id),
         product=data["product"],
         quantity=data["quantity"],
+        budget=data["budget"],
+        deadline=data["deadline"],
+        client_email=data.get("client_email", ""),
         comment=comment,
     )
     await state.clear()
