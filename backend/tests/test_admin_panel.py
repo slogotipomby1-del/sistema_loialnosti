@@ -3,6 +3,7 @@ from django.contrib.admin.sites import site
 from django.test import RequestFactory
 from django.urls import reverse
 
+from apps.adminpanel.admin import ParticipantCompanyStateFilter, ReferralLeadSourceFilter
 from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
 from apps.common.choices import (
     BONUS_ENTRY_TYPE_REVERSAL,
@@ -19,6 +20,38 @@ from apps.referrals.models import ReferralLead, ReferralLink
 from apps.users.models import Participant
 
 
+def test_referral_lead_source_filter_has_human_labels():
+    filter_instance = ReferralLeadSourceFilter(
+        request=None,
+        params={},
+        model=ReferralLead,
+        model_admin=site._registry[ReferralLead],
+    )
+
+    assert filter_instance.title == "Тип заявки"
+    assert filter_instance.lookups(None, None) == (
+        ("self", "Своя заявка"),
+        ("referral", "Реферал"),
+    )
+
+
+def test_participant_company_state_filter_has_human_labels():
+    filter_instance = ParticipantCompanyStateFilter(
+        request=None,
+        params={},
+        model=Participant,
+        model_admin=site._registry[Participant],
+    )
+
+    assert filter_instance.title == "Компания"
+    assert filter_instance.lookups(None, None) == (
+        ("with_company", "Есть компания"),
+        ("without_company", "Без компании"),
+        ("team", "В компании несколько участников"),
+        ("without_primary", "В компании нет основного контакта"),
+    )
+
+
 def test_referral_lead_admin_has_main_columns():
     admin_instance = site._registry[ReferralLead]
 
@@ -27,10 +60,13 @@ def test_referral_lead_admin_has_main_columns():
         "client_company",
         "client_name",
         "client_phone",
+        "phone_duplicates_badge",
+        "company_duplicates_badge",
         "product_interest",
         "referrer_name",
         "referrer_company",
-        "status_label",
+        "status_badge",
+        "quick_actions",
         "created_at",
     )
 
@@ -44,7 +80,8 @@ def test_bonus_spend_request_admin_has_main_columns():
         "participant_phone",
         "comment",
         "amount",
-        "status_label",
+        "status_badge",
+        "quick_actions",
         "created_at",
     )
 
@@ -61,11 +98,13 @@ def test_participant_admin_has_useful_dashboard_columns():
     assert admin_instance.list_display == (
         "full_name",
         "company",
+        "company_team_size",
         "position",
         "is_primary_contact",
-        "bonus_balance",
+        "bonus_balance_badge",
         "invited_leads_count",
         "spend_requests_count",
+        "quick_actions",
         "phone",
         "telegram_id",
         "consent_accepted",
@@ -75,6 +114,11 @@ def test_participant_admin_has_useful_dashboard_columns():
     assert admin_instance.list_per_page == 25
     assert admin_instance.readonly_fields == ("created_at", "bonus_balance", "invited_leads_count", "spend_requests_count")
     assert "export_selected_to_csv" in admin_instance.actions
+    filter_names = tuple(
+        item if isinstance(item, str) else item.parameter_name
+        for item in admin_instance.list_filter
+    )
+    assert filter_names == ("consent_accepted", "is_primary_contact", "created_at", "company_state")
 
 
 def test_referral_lead_admin_has_helpful_list_settings():
@@ -87,7 +131,7 @@ def test_referral_lead_admin_has_helpful_list_settings():
     assert admin_instance.ordering == ("-created_at",)
     assert admin_instance.date_hierarchy == "created_at"
     assert admin_instance.list_per_page == 25
-    assert filter_names == ("status", "created_at", "lead_source", "has_admin_comment")
+    assert filter_names == ("status", "created_at", "lead_source", "has_admin_comment", "duplicate_state")
     assert admin_instance.readonly_fields == ("lead_type_label", "referrer_name", "referrer_company", "created_at")
     assert "export_selected_to_csv" in admin_instance.actions
 
@@ -104,6 +148,14 @@ def test_bonus_spend_request_admin_has_helpful_list_settings():
     assert admin_instance.list_per_page == 25
     assert filter_names == ("status", "created_at", "has_comment")
     assert admin_instance.readonly_fields == ("participant_phone", "participant_company", "created_at")
+
+
+def test_referral_lead_admin_badge_columns_have_human_descriptions():
+    admin_instance = site._registry[ReferralLead]
+
+    assert admin_instance.status_label.short_description == "Статус"
+    assert admin_instance.status_badge.short_description == "Статус"
+    assert admin_instance.quick_actions.short_description == "Быстрые действия"
 
 
 @pytest.mark.django_db
@@ -143,8 +195,48 @@ def test_participant_admin_dashboard_counters_are_calculated():
     admin_instance = site._registry[Participant]
 
     assert str(admin_instance.bonus_balance(participant)) == "120.00"
+    assert "+120.00" in admin_instance.bonus_balance_badge(participant)
+    assert admin_instance.company_team_size(participant) == 1
     assert admin_instance.invited_leads_count(participant) == 1
     assert admin_instance.spend_requests_count(participant) == 1
+
+
+@pytest.mark.django_db
+def test_participant_changelist_filters_companies_without_primary_contact(client, admin_user):
+    Participant.objects.create(
+        telegram_id="tg-company-filter-1",
+        full_name="Анна",
+        phone="+375290000101",
+        company="ООО Без главного",
+        consent_accepted=True,
+        is_primary_contact=False,
+    )
+    participant_without_primary = Participant.objects.create(
+        telegram_id="tg-company-filter-2",
+        full_name="Мария",
+        phone="+375290000102",
+        company="ООО Без главного",
+        consent_accepted=True,
+        is_primary_contact=False,
+    )
+    Participant.objects.create(
+        telegram_id="tg-company-filter-3",
+        full_name="Ольга",
+        phone="+375290000103",
+        company="ООО С главным",
+        consent_accepted=True,
+        is_primary_contact=True,
+    )
+
+    client.force_login(admin_user)
+    response = client.get(
+        reverse("admin:users_participant_changelist"),
+        {"company_state": "without_primary"},
+    )
+
+    assert response.status_code == 200
+    result_list = list(response.context["cl"].queryset)
+    assert participant_without_primary in result_list
 
 
 @pytest.mark.django_db
@@ -303,6 +395,46 @@ def test_referral_lead_admin_counts_possible_duplicates():
 
 
 @pytest.mark.django_db
+def test_referral_lead_changelist_filters_possible_duplicates(client, admin_user):
+    participant = Participant.objects.create(
+        telegram_id="tg-admin-dup-filter",
+        full_name="Ольга",
+        phone="+375299111113",
+        consent_accepted=True,
+    )
+    link = ReferralLink.objects.create(code="dup-filter", participant=participant)
+    duplicate_lead = ReferralLead.objects.create(
+        referral_link=link,
+        client_company="ООО Клиент",
+        client_name="Иван",
+        client_phone="+375299000002",
+    )
+    ReferralLead.objects.create(
+        referral_link=None,
+        client_company="ООО Клиент",
+        client_name="Мария",
+        client_phone="+375299000002",
+    )
+    clean_lead = ReferralLead.objects.create(
+        referral_link=None,
+        client_company="ООО Чистая",
+        client_name="Анна",
+        client_phone="+375299000003",
+    )
+
+    client.force_login(admin_user)
+    response = client.get(
+        reverse("admin:referrals_referrallead_changelist"),
+        {"duplicate_state": "yes"},
+    )
+
+    assert response.status_code == 200
+    result_list = list(response.context["cl"].queryset)
+    assert duplicate_lead in result_list
+    assert clean_lead not in result_list
+
+
+@pytest.mark.django_db
 def test_bonus_spend_request_admin_bulk_actions_update_statuses():
     participant = Participant.objects.create(
         telegram_id="tg-admin-2",
@@ -351,13 +483,65 @@ def test_bonus_ledger_entry_admin_has_operation_type_column():
 
     assert admin_instance.list_display == (
         "participant",
+        "participant_company",
         "entry_type_label",
         "amount",
         "reason",
+        "lead_client",
         "expires_at",
-        "lead",
+        "quick_actions",
         "created_at",
     )
+
+
+@pytest.mark.django_db
+def test_participant_admin_renders_quick_actions():
+    participant = Participant.objects.create(
+        telegram_id="tg-quick-participant",
+        full_name="Ольга",
+        phone="+375291111120",
+        company="ООО Альфа",
+        consent_accepted=True,
+    )
+    admin_instance = site._registry[Participant]
+
+    actions_html = admin_instance.quick_actions(participant)
+
+    assert "Открыть" in actions_html
+    assert "Списания" in actions_html
+    assert "Компания" in actions_html
+
+
+@pytest.mark.django_db
+def test_bonus_ledger_entry_admin_shows_company_client_and_quick_actions():
+    participant = Participant.objects.create(
+        telegram_id="tg-ledger-quick",
+        full_name="Мария",
+        phone="+375291111121",
+        company="ООО Бета",
+        consent_accepted=True,
+    )
+    lead = ReferralLead.objects.create(
+        referral_link=None,
+        client_company="ООО Клиент",
+        client_name="Иван",
+        client_phone="+375291111122",
+    )
+    entry = BonusLedgerEntry.objects.create(
+        participant=participant,
+        lead=lead,
+        amount="70.00",
+        reason="Начисление",
+    )
+    admin_instance = site._registry[BonusLedgerEntry]
+
+    assert admin_instance.participant_company(entry) == "ООО Бета"
+    assert admin_instance.lead_client(entry) == "Иван"
+
+    actions_html = admin_instance.quick_actions(entry)
+
+    assert "Участник" in actions_html
+    assert "Лид" in actions_html
 
 
 @pytest.mark.django_db
@@ -388,6 +572,7 @@ def test_participant_admin_balance_can_be_negative_after_reversal_and_approved_s
     admin_instance = site._registry[Participant]
 
     assert str(admin_instance.bonus_balance(participant)) == "-20.00"
+    assert "-20.00" in admin_instance.bonus_balance_badge(participant)
 
 
 @pytest.mark.django_db
@@ -441,3 +626,32 @@ def test_referral_lead_admin_can_export_selected_to_csv():
     assert "Иван" in content
     assert "ivan@example.com" in content
     assert "Рюкзаки" in content
+
+
+@pytest.mark.django_db
+def test_referral_lead_admin_renders_status_badge_and_quick_actions():
+    participant = Participant.objects.create(
+        telegram_id="tg-admin-badge",
+        full_name="?????",
+        phone="+375299111119",
+        company="??? ???????",
+        consent_accepted=True,
+    )
+    referral_link = ReferralLink.objects.create(code="badge-ref", participant=participant)
+    lead = ReferralLead.objects.create(
+        referral_link=referral_link,
+        client_company="??? ??????",
+        client_name="????",
+        client_phone="+375299222229",
+        status=LEAD_STATUS_IN_PROGRESS,
+    )
+    admin_instance = site._registry[ReferralLead]
+
+    status_html = admin_instance.status_badge(lead)
+    actions_html = admin_instance.quick_actions(lead)
+
+    assert admin_instance.status_label(lead) in status_html
+    assert "badge" in status_html
+    assert "Телефон" in actions_html
+    assert "Компания" in actions_html
+    assert "Участник" in actions_html

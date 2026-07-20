@@ -2,7 +2,9 @@ from django.contrib import admin
 from decimal import Decimal
 import csv
 from django.http import HttpResponse
+from django.db.models import Count, Q
 from django.urls import reverse
+from django.utils.html import format_html, format_html_join
 
 from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
 from apps.common.choices import (
@@ -85,6 +87,86 @@ class HasCommentFilter(admin.SimpleListFilter):
         return queryset
 
 
+class ReferralLeadDuplicateFilter(admin.SimpleListFilter):
+    title = "Дубли"
+    parameter_name = "duplicate_state"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Есть возможные дубли"),
+            ("clean", "Без дублей"),
+            ("phone", "Дубли по телефону"),
+            ("company", "Дубли по компании"),
+        )
+
+    def queryset(self, request, queryset):
+        duplicate_phone_values = (
+            queryset.exclude(client_phone="")
+            .values("client_phone")
+            .annotate(total=Count("id"))
+            .filter(total__gt=1)
+            .values("client_phone")
+        )
+        duplicate_company_values = (
+            queryset.exclude(client_company="")
+            .values("client_company")
+            .annotate(total=Count("id"))
+            .filter(total__gt=1)
+            .values("client_company")
+        )
+
+        if self.value() == "yes":
+            return queryset.filter(
+                Q(client_phone__in=duplicate_phone_values) | Q(client_company__in=duplicate_company_values)
+            )
+        if self.value() == "clean":
+            return queryset.exclude(
+                Q(client_phone__in=duplicate_phone_values) | Q(client_company__in=duplicate_company_values)
+            )
+        if self.value() == "phone":
+            return queryset.filter(client_phone__in=duplicate_phone_values)
+        if self.value() == "company":
+            return queryset.filter(client_company__in=duplicate_company_values)
+        return queryset
+
+
+class ParticipantCompanyStateFilter(admin.SimpleListFilter):
+    title = "Компания"
+    parameter_name = "company_state"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("with_company", "Есть компания"),
+            ("without_company", "Без компании"),
+            ("team", "В компании несколько участников"),
+            ("without_primary", "В компании нет основного контакта"),
+        )
+
+    def queryset(self, request, queryset):
+        company_values_with_team = (
+            queryset.exclude(company="")
+            .values("company")
+            .annotate(total=Count("id"))
+            .filter(total__gt=1)
+            .values("company")
+        )
+        company_values_with_primary = (
+            queryset.exclude(company="")
+            .filter(is_primary_contact=True)
+            .values("company")
+        )
+
+        if self.value() == "with_company":
+            return queryset.exclude(company="")
+        if self.value() == "without_company":
+            return queryset.filter(company="")
+        if self.value() == "team":
+            return queryset.filter(company__in=company_values_with_team)
+        if self.value() == "without_primary":
+            return queryset.exclude(company="").exclude(company__in=company_values_with_primary)
+        return queryset
+
+
 class AdminMemoMixin:
     change_form_template = "adminpanel/change_form.html"
     memo_title = ""
@@ -109,6 +191,9 @@ class AdminMemoMixin:
         )
 
 
+
+
+
 def build_csv_response(*, filename: str, header: list[str], rows: list[list[str]]) -> HttpResponse:
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
@@ -124,18 +209,20 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
     list_display = (
         "full_name",
         "company",
+        "company_team_size",
         "position",
         "is_primary_contact",
-        "bonus_balance",
+        "bonus_balance_badge",
         "invited_leads_count",
         "spend_requests_count",
+        "quick_actions",
         "phone",
         "telegram_id",
         "consent_accepted",
         "created_at",
     )
     search_fields = ("full_name", "company", "position", "phone", "telegram_id")
-    list_filter = ("consent_accepted", "is_primary_contact", "created_at")
+    list_filter = ("consent_accepted", "is_primary_contact", "created_at", ParticipantCompanyStateFilter)
     actions = ("export_selected_to_csv",)
     list_per_page = 25
     ordering = ("-created_at",)
@@ -214,7 +301,38 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
     def bonus_balance(self, obj: Participant) -> Decimal:
         return calculate_participant_balance(participant=obj)
 
+    @admin.display(description="Баланс")
+    def bonus_balance_badge(self, obj: Participant) -> str:
+        balance = self.bonus_balance(obj)
+        amount = f"{balance:.2f}"
+        if balance < 0:
+            color = "#9b2226"
+            bg = "#fee2e2"
+            prefix = ""
+        elif balance == 0:
+            color = "#5b6470"
+            bg = "#e5e7eb"
+            prefix = ""
+        else:
+            color = "#166534"
+            bg = "#dcfce7"
+            prefix = "+"
+        return format_html(
+            '<span style="display:inline-block;padding:4px 10px;border-radius:999px;'
+            'font-weight:700;color:{};background:{};">{}{}</span>',
+            color,
+            bg,
+            prefix,
+            amount,
+        )
+
     @admin.display(description="Приглашено")
+    @admin.display(description="Участников в компании", ordering="company")
+    def company_team_size(self, obj: Participant) -> int:
+        if not obj.company:
+            return 1
+        return Participant.objects.filter(company=obj.company).count()
+
     def invited_leads_count(self, obj: Participant) -> int:
         referral_link = getattr(obj, "referral_link", None)
         if not referral_link:
@@ -228,6 +346,29 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
     @admin.display(description="Списания")
     def spend_requests_count(self, obj: Participant) -> int:
         return BonusSpendRequest.objects.filter(participant=obj).count()
+
+    @admin.display(description="Быстрые действия")
+    def quick_actions(self, obj: Participant) -> str:
+        links = [
+            format_html(
+                '<a href="{}">Открыть</a>',
+                reverse("admin:users_participant_change", args=[obj.pk]),
+            ),
+            format_html(
+                '<a href="{}?q={}">Списания</a>',
+                reverse("admin:bonuses_bonusspendrequest_changelist"),
+                obj.phone,
+            ),
+        ]
+        if obj.company:
+            links.append(
+                format_html(
+                    '<a href="{}?q={}">Компания</a>',
+                    reverse("admin:users_participant_changelist"),
+                    obj.company,
+                )
+            )
+        return format_html_join(" ", "{}", ((link,) for link in links))
 
     @admin.action(description="Выгрузить выбранных участников в CSV")
     def export_selected_to_csv(self, request, queryset):
@@ -268,10 +409,13 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
         "client_company",
         "client_name",
         "client_phone",
+        "phone_duplicates_badge",
+        "company_duplicates_badge",
         "product_interest",
         "referrer_name",
         "referrer_company",
-        "status_label",
+        "status_badge",
+        "quick_actions",
         "created_at",
     )
     search_fields = (
@@ -282,7 +426,7 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
         "product_interest",
         "referral_link__participant__full_name",
     )
-    list_filter = ("status", "created_at", ReferralLeadSourceFilter, HasAdminCommentFilter)
+    list_filter = ("status", "created_at", ReferralLeadSourceFilter, HasAdminCommentFilter, ReferralLeadDuplicateFilter)
     autocomplete_fields = ("referral_link",)
     list_select_related = ("referral_link__participant",)
     list_per_page = 25
@@ -366,6 +510,49 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
     def status_label(self, obj: ReferralLead) -> str:
         return get_lead_status_label(obj.status)
 
+    @admin.display(description="Статус")
+    def status_badge(self, obj: ReferralLead) -> str:
+        label = self.status_label(obj)
+        color_map = {
+            LEAD_STATUS_IN_PROGRESS: ("#1d4ed8", "#dbeafe"),
+            LEAD_STATUS_ORDERED: ("#b45309", "#fef3c7"),
+            LEAD_STATUS_BONUS_CONFIRMED: ("#166534", "#dcfce7"),
+            LEAD_STATUS_REJECTED: ("#b91c1c", "#fee2e2"),
+        }
+        text_color, bg_color = color_map.get(obj.status, ("#475569", "#e2e8f0"))
+        return format_html(
+            '<span class="badge" style="display:inline-block;padding:4px 10px;border-radius:999px;font-weight:600;color:{};background:{};">{}</span>',
+            text_color,
+            bg_color,
+            label,
+        )
+
+    @admin.display(description="Быстрые действия")
+    def quick_actions(self, obj: ReferralLead) -> str:
+        links = [
+            format_html(
+                '<a href="{}?q={}" style="margin-right:8px; white-space:nowrap;">Телефон</a>',
+                reverse("admin:referrals_referrallead_changelist"),
+                obj.client_phone,
+            )
+        ]
+        if obj.client_company:
+            links.append(
+                format_html(
+                    '<a href="{}?q={}" style="margin-right:8px; white-space:nowrap;">Компания</a>',
+                    reverse("admin:referrals_referrallead_changelist"),
+                    obj.client_company,
+                )
+            )
+        if obj.referral_link:
+            links.append(
+                format_html(
+                    '<a href="{}" style="white-space:nowrap;">Участник</a>',
+                    reverse("admin:users_participant_change", args=[obj.referral_link.participant.pk]),
+                )
+            )
+        return format_html_join(" ", "{}", ((link,) for link in links))
+
     def phone_duplicates_count(self, obj: ReferralLead) -> int:
         return ReferralLead.objects.filter(client_phone=obj.client_phone).exclude(pk=obj.pk).count()
 
@@ -373,6 +560,16 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
         if not obj.client_company:
             return 0
         return ReferralLead.objects.filter(client_company=obj.client_company).exclude(pk=obj.pk).count()
+
+    @admin.display(description="Дубли: телефон")
+    def phone_duplicates_badge(self, obj: ReferralLead) -> str:
+        count = self.phone_duplicates_count(obj)
+        return f"+{count}" if count else "—"
+
+    @admin.display(description="Дубли: компания")
+    def company_duplicates_badge(self, obj: ReferralLead) -> str:
+        count = self.company_duplicates_count(obj)
+        return f"+{count}" if count else "—"
 
     def build_lead_action_links(self, obj: ReferralLead) -> tuple[dict, ...]:
         links = [
@@ -469,7 +666,17 @@ class ReferralLinkAdmin(admin.ModelAdmin):
 
 @admin.register(BonusLedgerEntry)
 class BonusLedgerEntryAdmin(AdminMemoMixin, admin.ModelAdmin):
-    list_display = ("participant", "entry_type_label", "amount", "reason", "expires_at", "lead", "created_at")
+    list_display = (
+        "participant",
+        "participant_company",
+        "entry_type_label",
+        "amount",
+        "reason",
+        "lead_client",
+        "expires_at",
+        "quick_actions",
+        "created_at",
+    )
     search_fields = ("participant__full_name", "reason", "lead__client_name")
     list_filter = ("entry_type", "created_at")
     autocomplete_fields = ("participant", "lead")
@@ -492,14 +699,80 @@ class BonusLedgerEntryAdmin(AdminMemoMixin, admin.ModelAdmin):
     )
     memo_note = "Главный принцип: сначала проверить основание операции, потом подтверждать запись в журнале."
 
+    def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
+        if obj is not None:
+            context["admin_client_card"] = {
+                "title": "Карточка бонусной операции",
+                "items": (
+                    ("Участник", obj.participant.full_name or "Не указан"),
+                    ("Компания", obj.participant.company or "Не указана"),
+                    ("Тип операции", self.entry_type_label(obj)),
+                    ("Сумма", f"{obj.amount:.2f}"),
+                    ("Основание", obj.reason or "Не указано"),
+                    ("Реферальная заявка", obj.lead.client_name if obj.lead else "Без заявки"),
+                    ("Сгорает", obj.expires_at.strftime("%d.%m.%Y") if obj.expires_at else "Не указано"),
+                    (
+                        "Предупреждение отправлено",
+                        obj.expiration_warning_sent_at.strftime("%d.%m.%Y %H:%M")
+                        if obj.expiration_warning_sent_at
+                        else "Ещё не отправлено",
+                    ),
+                    ("Дата создания", obj.created_at.strftime("%d.%m.%Y %H:%M")),
+                ),
+            }
+        return super().render_change_form(
+            request,
+            context,
+            add=add,
+            change=change,
+            form_url=form_url,
+            obj=obj,
+        )
+
     @admin.display(description="Тип операции")
     def entry_type_label(self, obj: BonusLedgerEntry) -> str:
         return get_bonus_entry_type_label(obj.entry_type)
 
+    @admin.display(description="Компания")
+    def participant_company(self, obj: BonusLedgerEntry) -> str:
+        return obj.participant.company or "Не указана"
+
+    @admin.display(description="Клиент")
+    def lead_client(self, obj: BonusLedgerEntry) -> str:
+        if not obj.lead:
+            return "Без заявки"
+        return obj.lead.client_name or obj.lead.client_company or "Без имени"
+
+    @admin.display(description="Быстрые действия")
+    def quick_actions(self, obj: BonusLedgerEntry) -> str:
+        links = [
+            format_html(
+                '<a href="{}">Участник</a>',
+                reverse("admin:users_participant_change", args=[obj.participant_id]),
+            )
+        ]
+        if obj.lead_id:
+            links.append(
+                format_html(
+                    '<a href="{}">Лид</a>',
+                    reverse("admin:referrals_referrallead_change", args=[obj.lead_id]),
+                )
+            )
+        return format_html_join(" ", "{}", ((link,) for link in links))
+
 
 @admin.register(BonusSpendRequest)
 class BonusSpendRequestAdmin(AdminMemoMixin, admin.ModelAdmin):
-    list_display = ("participant", "participant_company", "participant_phone", "comment", "amount", "status_label", "created_at")
+    list_display = (
+        "participant",
+        "participant_company",
+        "participant_phone",
+        "comment",
+        "amount",
+        "status_badge",
+        "quick_actions",
+        "created_at",
+    )
     search_fields = ("participant__full_name", "participant__company", "participant__phone", "comment")
     list_filter = ("status", "created_at", HasCommentFilter)
     autocomplete_fields = ("participant",)
@@ -523,6 +796,39 @@ class BonusSpendRequestAdmin(AdminMemoMixin, admin.ModelAdmin):
     )
     memo_note = "Если запрос спорный, оставьте комментарий и принимайте решение вручную."
 
+    def render_change_form(self, request, context, add=False, change=False, form_url="", obj=None):
+        if obj is not None:
+            context["admin_client_card"] = {
+                "title": "Карточка запроса на списание",
+                "items": (
+                    ("Участник", obj.participant.full_name or "Не указан"),
+                    ("Компания", obj.participant.company or "Не указана"),
+                    ("Телефон", obj.participant.phone),
+                    ("Подарок или комментарий", obj.comment or "Не указано"),
+                    ("Сумма", f"{obj.amount:.2f}"),
+                    ("Статус", self.status_label(obj)),
+                    ("Дата создания", obj.created_at.strftime("%d.%m.%Y %H:%M")),
+                ),
+            }
+            context["admin_action_links"] = (
+                {
+                    "title": "Открыть участника",
+                    "url": reverse("admin:users_participant_change", args=[obj.participant_id]),
+                },
+                {
+                    "title": "Найти заявки этого участника",
+                    "url": f'{reverse("admin:referrals_referrallead_changelist")}?client_phone={obj.participant.phone}',
+                },
+            )
+        return super().render_change_form(
+            request,
+            context,
+            add=add,
+            change=change,
+            form_url=form_url,
+            obj=obj,
+        )
+
     @admin.display(description="Телефон")
     def participant_phone(self, obj: BonusSpendRequest) -> str:
         return obj.participant.phone
@@ -535,6 +841,33 @@ class BonusSpendRequestAdmin(AdminMemoMixin, admin.ModelAdmin):
     def status_label(self, obj: BonusSpendRequest) -> str:
         return get_spend_request_status_label(obj.status)
 
+    @admin.display(description="Статус")
+    def status_badge(self, obj: BonusSpendRequest) -> str:
+        label = self.status_label(obj)
+        color = {
+            SPEND_REQUEST_STATUS_PENDING: "#8a6d3b",
+            SPEND_REQUEST_STATUS_APPROVED: "#2d6a4f",
+            SPEND_REQUEST_STATUS_REJECTED: "#9b2226",
+        }.get(obj.status, "#5b6470")
+        return format_html(
+            '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:{}1a;color:{};font-weight:600;">{}</span>',
+            color,
+            color,
+            label,
+        )
+
+    @admin.display(description="Быстрые действия")
+    def quick_actions(self, obj: BonusSpendRequest) -> str:
+        participant_url = reverse("admin:users_participant_change", args=[obj.participant_id])
+        leads_url = f"{reverse('admin:referrals_referrallead_changelist')}?client_phone={obj.participant.phone}"
+        requests_url = f"{reverse('admin:bonuses_bonusspendrequest_changelist')}?q={obj.participant.phone}"
+        return format_html(
+            '<a href="{}">Участник</a><br><a href="{}">Заявки клиента</a><br><a href="{}">Все списания</a>',
+            participant_url,
+            leads_url,
+            requests_url,
+        )
+
     @admin.action(description="Перевести в статус «Подтверждена»")
     def mark_as_approved(self, request, queryset):
         queryset.update(status=SPEND_REQUEST_STATUS_APPROVED)
@@ -542,3 +875,4 @@ class BonusSpendRequestAdmin(AdminMemoMixin, admin.ModelAdmin):
     @admin.action(description="Перевести в статус «Отклонена»")
     def mark_as_rejected(self, request, queryset):
         queryset.update(status=SPEND_REQUEST_STATUS_REJECTED)
+
