@@ -1,6 +1,6 @@
 from aiogram import Router
 
-from apps.bot.handlers import catalog, gifts, lead, member, spend, start, support
+from apps.bot.handlers import catalog, fallback, gifts, lead, member, spend, start, support
 
 
 def build_router() -> Router:
@@ -12,4 +12,5 @@ def build_router() -> Router:
     router.include_router(lead.router)
     router.include_router(spend.router)
     router.include_router(support.router)
+    router.include_router(fallback.router)
     return router
