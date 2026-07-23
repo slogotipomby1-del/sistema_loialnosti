@@ -2,6 +2,7 @@ from django import template
 from django.urls import reverse
 
 from apps.bonuses.models import BonusSpendRequest
+from apps.bonuses.services import get_expiring_bonus_preview, get_upcoming_expiration_warning_preview
 from apps.common.choices import LEAD_STATUS_NEW, LEAD_STATUS_ORDERED, SPEND_REQUEST_STATUS_PENDING
 from apps.referrals.models import ReferralLead
 from apps.users.models import Participant
@@ -17,6 +18,8 @@ def admin_dashboard_cards():
     pending_spend_count = BonusSpendRequest.objects.filter(
         status=SPEND_REQUEST_STATUS_PENDING
     ).count()
+    upcoming_expiration_count = len(get_upcoming_expiration_warning_preview())
+    expired_bonus_count = len(get_expiring_bonus_preview())
     disputed_count = ReferralLead.objects.exclude(admin_comment="").count()
     participants_without_company_count = Participant.objects.filter(company="").count()
 
@@ -44,6 +47,18 @@ def admin_dashboard_cards():
             "count": pending_spend_count,
             "hint": "Подарки и списания, которые ждут решения.",
             "url": f"{reverse('admin:bonuses_bonusspendrequest_changelist')}?status={SPEND_REQUEST_STATUS_PENDING}",
+        },
+        {
+            "title": "Скоро сгорят",
+            "count": upcoming_expiration_count,
+            "hint": "Бонусы, по которым скоро нужно отправлять предупреждение участнику.",
+            "url": reverse("admin:bonuses_bonusledgerentry_changelist"),
+        },
+        {
+            "title": "Уже просрочены",
+            "count": expired_bonus_count,
+            "hint": "Бонусы с истёкшим сроком, которые готовы к dry-run или ручной проверке.",
+            "url": reverse("admin:bonuses_bonusledgerentry_changelist"),
         },
         {
             "title": "Спорные случаи",
@@ -78,6 +93,11 @@ def admin_dashboard_priority_items():
             "text": "Проверьте подарки и списания, которые ждут вашего решения.",
             "url": f"{reverse('admin:bonuses_bonusspendrequest_changelist')}?status={SPEND_REQUEST_STATUS_PENDING}",
         },
+        {
+            "title": "Сгорание бонусов",
+            "text": "Проверьте, не появились ли бонусы, по которым нужно отправить предупреждение или запустить dry-run.",
+            "url": reverse("admin:bonuses_bonusledgerentry_changelist"),
+        },
     )
 
 
@@ -91,6 +111,10 @@ def admin_dashboard_quick_links():
         {
             "title": "Открыть списания бонусов",
             "url": reverse("admin:bonuses_bonusspendrequest_changelist"),
+        },
+        {
+            "title": "Открыть операции по бонусам",
+            "url": reverse("admin:bonuses_bonusledgerentry_changelist"),
         },
         {
             "title": "Открыть участников",

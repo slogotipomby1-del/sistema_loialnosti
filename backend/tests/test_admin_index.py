@@ -1,8 +1,11 @@
+from datetime import date, timedelta
+from decimal import Decimal
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from apps.bonuses.models import BonusSpendRequest
+from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
 from apps.common.choices import LEAD_STATUS_NEW, LEAD_STATUS_ORDERED, SPEND_REQUEST_STATUS_PENDING
 from apps.referrals.models import ReferralLead
 from apps.users.models import Participant
@@ -67,6 +70,18 @@ def test_admin_index_shows_operational_dashboard_cards(client):
         comment="Доставка",
         status=SPEND_REQUEST_STATUS_PENDING,
     )
+    BonusLedgerEntry.objects.create(
+        participant=participant,
+        amount=Decimal("80.00"),
+        reason="Бонус за заказ",
+        expires_at=date.today() + timedelta(days=30),
+    )
+    BonusLedgerEntry.objects.create(
+        participant=participant,
+        amount=Decimal("60.00"),
+        reason="Бонус за заказ",
+        expires_at=date(2026, 7, 1),
+    )
 
     client.force_login(admin_user)
     response = client.get(reverse("admin:index"))
@@ -80,9 +95,13 @@ def test_admin_index_shows_operational_dashboard_cards(client):
     assert "Свои заявки" in content
     assert "Ждут подтверждения" in content
     assert "Списания на рассмотрении" in content
+    assert "Скоро сгорят" in content
+    assert "Уже просрочены" in content
     assert "Спорные случаи" in content
     assert "Профили без компании" in content
     assert "Что проверить в первую очередь" in content
+    assert "Сгорание бонусов" in content
     assert "Быстрые переходы" in content
+    assert "Открыть операции по бонусам" in content
     assert ">2<" in content
-    assert ">1<" in content
+    assert content.count(">1<") >= 3
