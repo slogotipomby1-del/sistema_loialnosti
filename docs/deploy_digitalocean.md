@@ -104,6 +104,8 @@ ss -tlnp | grep :80
 ```bash
 cd /opt/sistema_loialnosti/backend
 source .venv/bin/activate
+python manage.py send_bonus_expiration_warnings --dry-run
+python manage.py expire_bonus_entries --dry-run
 python manage.py send_bonus_expiration_warnings
 python manage.py expire_bonus_entries
 ```

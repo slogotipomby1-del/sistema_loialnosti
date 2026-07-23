@@ -139,6 +139,13 @@ systemctl restart referral_bot
 systemctl restart nginx
 ```
 
+```bash
+cd /opt/sistema_loialnosti/backend
+source .venv/bin/activate
+python manage.py send_bonus_expiration_warnings --dry-run
+python manage.py expire_bonus_entries --dry-run
+```
+
 Админка на текущем этапе открывается по адресу:
 
 - `http://142.93.49.181/admin/`

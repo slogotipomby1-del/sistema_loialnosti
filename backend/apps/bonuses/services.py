@@ -26,6 +26,13 @@ class BonusLot:
     remaining_amount: Decimal
 
 
+@dataclass
+class BonusExpirationPreview:
+    participant: Participant
+    entry: BonusLedgerEntry
+    remaining_amount: Decimal
+
+
 def _build_bonus_lots(*, participant: Participant) -> list[BonusLot]:
     accrual_entries = list(
         BonusLedgerEntry.objects.filter(
@@ -73,10 +80,10 @@ def _build_bonus_lots(*, participant: Participant) -> list[BonusLot]:
     return lots
 
 
-def send_upcoming_expiration_warnings(*, today: date | None = None) -> int:
+def get_upcoming_expiration_warning_preview(*, today: date | None = None) -> list[BonusExpirationPreview]:
     today = today or timezone.localdate()
     warning_date = today + timedelta(days=WARNING_DAYS_BEFORE_EXPIRATION)
-    warnings_sent = 0
+    preview_items: list[BonusExpirationPreview] = []
 
     participant_ids = (
         BonusLedgerEntry.objects.filter(
@@ -97,24 +104,39 @@ def send_upcoming_expiration_warnings(*, today: date | None = None) -> int:
             ):
                 continue
 
-            send_telegram_message(
-                chat_id=participant.telegram_id,
-                text=(
-                    f"Напоминаем: {lot.remaining_amount:.2f} бонуса(ов) "
-                    f"сгорят {lot.entry.expires_at:%d.%m.%Y}.\n"
-                    "Если хотите использовать их раньше — оставьте заявку в разделе подарков."
-                ),
+            preview_items.append(
+                BonusExpirationPreview(
+                    participant=participant,
+                    entry=lot.entry,
+                    remaining_amount=lot.remaining_amount,
+                )
             )
-            lot.entry.expiration_warning_sent_at = timezone.now()
-            lot.entry.save(update_fields=["expiration_warning_sent_at"])
-            warnings_sent += 1
+
+    return preview_items
+
+
+def send_upcoming_expiration_warnings(*, today: date | None = None) -> int:
+    warnings_sent = 0
+
+    for item in get_upcoming_expiration_warning_preview(today=today):
+        send_telegram_message(
+            chat_id=item.participant.telegram_id,
+            text=(
+                f"Напоминаем: {item.remaining_amount:.2f} бонуса(ов) "
+                f"сгорят {item.entry.expires_at:%d.%m.%Y}.\n"
+                "Если хотите использовать их раньше — оставьте заявку в разделе подарков."
+            ),
+        )
+        item.entry.expiration_warning_sent_at = timezone.now()
+        item.entry.save(update_fields=["expiration_warning_sent_at"])
+        warnings_sent += 1
 
     return warnings_sent
 
 
-def expire_bonus_entries(*, today: date | None = None) -> int:
+def get_expiring_bonus_preview(*, today: date | None = None) -> list[BonusExpirationPreview]:
     today = today or timezone.localdate()
-    expired_count = 0
+    preview_items: list[BonusExpirationPreview] = []
 
     participant_ids = (
         BonusLedgerEntry.objects.filter(
@@ -130,17 +152,32 @@ def expire_bonus_entries(*, today: date | None = None) -> int:
             if not lot.entry.expires_at or lot.entry.expires_at >= today or lot.remaining_amount <= 0:
                 continue
 
-            with transaction.atomic():
-                BonusLedgerEntry.objects.create(
+            preview_items.append(
+                BonusExpirationPreview(
                     participant=participant,
-                    lead=lot.entry.lead,
-                    entry_type=BONUS_ENTRY_TYPE_EXPIRATION,
-                    amount=-lot.remaining_amount,
-                    reason=(
-                        f"Сгорание остатка по начислению #{lot.entry.id} "
-                        f"от {lot.entry.created_at:%d.%m.%Y}"
-                    ),
+                    entry=lot.entry,
+                    remaining_amount=lot.remaining_amount,
                 )
-            expired_count += 1
+            )
+
+    return preview_items
+
+
+def expire_bonus_entries(*, today: date | None = None) -> int:
+    expired_count = 0
+
+    for item in get_expiring_bonus_preview(today=today):
+        with transaction.atomic():
+            BonusLedgerEntry.objects.create(
+                participant=item.participant,
+                lead=item.entry.lead,
+                entry_type=BONUS_ENTRY_TYPE_EXPIRATION,
+                amount=-item.remaining_amount,
+                reason=(
+                    f"Сгорание остатка по начислению #{item.entry.id} "
+                    f"от {item.entry.created_at:%d.%m.%Y}"
+                ),
+            )
+        expired_count += 1
 
     return expired_count
