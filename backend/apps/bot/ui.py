@@ -51,6 +51,7 @@ def build_start_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text=REGISTER_BUTTON_TEXT)]],
         resize_keyboard=True,
+        is_persistent=True,
     )
 
 
@@ -63,6 +64,7 @@ def build_main_menu_keyboard() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=MAIN_HELP_BUTTON_TEXT)],
         ],
         resize_keyboard=True,
+        is_persistent=True,
     )
 
 
@@ -81,6 +83,7 @@ def build_cabinet_keyboard() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=BACK_TO_MENU_BUTTON_TEXT)],
         ],
         resize_keyboard=True,
+        is_persistent=True,
     )
 
 
@@ -92,6 +95,7 @@ def build_recommend_keyboard() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=BACK_TO_MENU_BUTTON_TEXT)],
         ],
         resize_keyboard=True,
+        is_persistent=True,
     )
 
 
@@ -104,6 +108,7 @@ def build_spend_menu_keyboard() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=BACK_TO_MENU_BUTTON_TEXT)],
         ],
         resize_keyboard=True,
+        is_persistent=True,
     )
 
 
@@ -117,6 +122,7 @@ def build_help_menu_keyboard() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=BACK_TO_MENU_BUTTON_TEXT)],
         ],
         resize_keyboard=True,
+        is_persistent=True,
     )
 
 

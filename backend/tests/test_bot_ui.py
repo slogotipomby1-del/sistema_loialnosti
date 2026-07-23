@@ -5,6 +5,7 @@ def test_start_keyboard_has_register_button():
     keyboard = ui.build_start_keyboard()
 
     assert keyboard.keyboard[0][0].text == ui.REGISTER_BUTTON_TEXT
+    assert keyboard.is_persistent is True
 
 
 def test_main_menu_keyboard_has_expected_buttons():
@@ -17,6 +18,7 @@ def test_main_menu_keyboard_has_expected_buttons():
         ui.MAIN_SPEND_BUTTON_TEXT,
         ui.MAIN_HELP_BUTTON_TEXT,
     ]
+    assert keyboard.is_persistent is True
 
 
 def test_cabinet_keyboard_has_expected_buttons():
@@ -31,6 +33,7 @@ def test_cabinet_keyboard_has_expected_buttons():
         ui.OWN_COMPANY_ORDER_BUTTON_TEXT,
         ui.BACK_TO_MENU_BUTTON_TEXT,
     ]
+    assert keyboard.is_persistent is True
 
 
 def test_recommend_keyboard_has_expected_buttons():
@@ -42,6 +45,7 @@ def test_recommend_keyboard_has_expected_buttons():
         ui.READY_TEXT_BUTTON_TEXT,
         ui.BACK_TO_MENU_BUTTON_TEXT,
     ]
+    assert keyboard.is_persistent is True
 
 
 def test_spend_menu_keyboard_has_expected_buttons():
@@ -54,6 +58,7 @@ def test_spend_menu_keyboard_has_expected_buttons():
         ui.CATALOG_BUTTON_TEXT,
         ui.BACK_TO_MENU_BUTTON_TEXT,
     ]
+    assert keyboard.is_persistent is True
 
 
 def test_help_menu_keyboard_has_expected_buttons():
@@ -67,6 +72,7 @@ def test_help_menu_keyboard_has_expected_buttons():
         ui.SUPPORT_BUTTON_TEXT,
         ui.BACK_TO_MENU_BUTTON_TEXT,
     ]
+    assert keyboard.is_persistent is True
 
 
 def test_start_text_contains_program_message():
