@@ -617,19 +617,23 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
 
     @admin.action(description="Перевести в статус «В работе»")
     def mark_as_in_progress(self, request, queryset):
-        queryset.update(status=LEAD_STATUS_IN_PROGRESS)
+        updated_count = queryset.update(status=LEAD_STATUS_IN_PROGRESS)
+        self.message_user(request, f"Заявок переведено в статус «В работе»: {updated_count}.")
 
     @admin.action(description="Перевести в статус «Ожидает подтверждения»")
     def mark_as_ordered(self, request, queryset):
-        queryset.update(status=LEAD_STATUS_ORDERED)
+        updated_count = queryset.update(status=LEAD_STATUS_ORDERED)
+        self.message_user(request, f"Заявок переведено в статус «Ожидает подтверждения»: {updated_count}.")
 
     @admin.action(description="Перевести в статус «Бонус начислен»")
     def mark_as_bonus_confirmed(self, request, queryset):
-        queryset.update(status=LEAD_STATUS_BONUS_CONFIRMED)
+        updated_count = queryset.update(status=LEAD_STATUS_BONUS_CONFIRMED)
+        self.message_user(request, f"Заявок переведено в статус «Бонус начислен»: {updated_count}.")
 
     @admin.action(description="Перевести в статус «Отклонена»")
     def mark_as_rejected(self, request, queryset):
-        queryset.update(status=LEAD_STATUS_REJECTED)
+        updated_count = queryset.update(status=LEAD_STATUS_REJECTED)
+        self.message_user(request, f"Заявок переведено в статус «Отклонена»: {updated_count}.")
 
     @admin.action(description="Выгрузить выбранные заявки в CSV")
     def export_selected_to_csv(self, request, queryset):
@@ -891,9 +895,11 @@ class BonusSpendRequestAdmin(AdminMemoMixin, admin.ModelAdmin):
 
     @admin.action(description="Перевести в статус «Подтверждена»")
     def mark_as_approved(self, request, queryset):
-        queryset.update(status=SPEND_REQUEST_STATUS_APPROVED)
+        updated_count = queryset.update(status=SPEND_REQUEST_STATUS_APPROVED)
+        self.message_user(request, f"Подтверждено списаний: {updated_count}.")
 
     @admin.action(description="Перевести в статус «Отклонена»")
     def mark_as_rejected(self, request, queryset):
-        queryset.update(status=SPEND_REQUEST_STATUS_REJECTED)
+        updated_count = queryset.update(status=SPEND_REQUEST_STATUS_REJECTED)
+        self.message_user(request, f"Отклонено списаний: {updated_count}.")
 

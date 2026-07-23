@@ -319,22 +319,32 @@ def test_referral_lead_admin_bulk_actions_update_statuses():
     )
     admin_instance = site._registry[ReferralLead]
     request = RequestFactory().post("/admin/referrals/referrallead/")
+    messages = []
+
+    def capture_message(request, message):
+        messages.append(message)
+
+    admin_instance.message_user = capture_message
 
     admin_instance.mark_as_in_progress(request, ReferralLead.objects.filter(pk=lead.pk))
     lead.refresh_from_db()
     assert lead.status == LEAD_STATUS_IN_PROGRESS
+    assert messages[-1] == "Заявок переведено в статус «В работе»: 1."
 
     admin_instance.mark_as_ordered(request, ReferralLead.objects.filter(pk=lead.pk))
     lead.refresh_from_db()
     assert lead.status == LEAD_STATUS_ORDERED
+    assert messages[-1] == "Заявок переведено в статус «Ожидает подтверждения»: 1."
 
     admin_instance.mark_as_bonus_confirmed(request, ReferralLead.objects.filter(pk=lead.pk))
     lead.refresh_from_db()
     assert lead.status == LEAD_STATUS_BONUS_CONFIRMED
+    assert messages[-1] == "Заявок переведено в статус «Бонус начислен»: 1."
 
     admin_instance.mark_as_rejected(request, ReferralLead.objects.filter(pk=lead.pk))
     lead.refresh_from_db()
     assert lead.status == LEAD_STATUS_REJECTED
+    assert messages[-1] == "Заявок переведено в статус «Отклонена»: 1."
 
 
 @pytest.mark.django_db
@@ -449,14 +459,22 @@ def test_bonus_spend_request_admin_bulk_actions_update_statuses():
     )
     admin_instance = site._registry[BonusSpendRequest]
     request = RequestFactory().post("/admin/bonuses/bonusspendrequest/")
+    messages = []
+
+    def capture_message(request, message):
+        messages.append(message)
+
+    admin_instance.message_user = capture_message
 
     admin_instance.mark_as_approved(request, BonusSpendRequest.objects.filter(pk=request_obj.pk))
     request_obj.refresh_from_db()
     assert request_obj.status == SPEND_REQUEST_STATUS_APPROVED
+    assert messages[-1] == "Подтверждено списаний: 1."
 
     admin_instance.mark_as_rejected(request, BonusSpendRequest.objects.filter(pk=request_obj.pk))
     request_obj.refresh_from_db()
     assert request_obj.status == SPEND_REQUEST_STATUS_REJECTED
+    assert messages[-1] == "Отклонено списаний: 1."
 
 
 @pytest.mark.django_db
