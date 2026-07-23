@@ -480,6 +480,10 @@ def test_bonus_spend_request_admin_shows_participant_company():
 
 def test_bonus_ledger_entry_admin_has_operation_type_column():
     admin_instance = site._registry[BonusLedgerEntry]
+    filter_names = tuple(
+        item if isinstance(item, str) else item.parameter_name
+        for item in admin_instance.list_filter
+    )
 
     assert admin_instance.list_display == (
         "participant",
@@ -492,6 +496,7 @@ def test_bonus_ledger_entry_admin_has_operation_type_column():
         "quick_actions",
         "created_at",
     )
+    assert filter_names == ("entry_type", "created_at", "bonus_expiration_state")
 
 
 @pytest.mark.django_db

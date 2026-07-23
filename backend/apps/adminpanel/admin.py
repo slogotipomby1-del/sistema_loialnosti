@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils.html import format_html, format_html_join
 
 from apps.bonuses.models import BonusLedgerEntry, BonusSpendRequest
+from apps.bonuses.services import get_expiring_bonus_preview, get_upcoming_expiration_warning_preview
 from apps.common.choices import (
     BONUS_ENTRY_TYPE_ACCRUAL,
     BONUS_ENTRY_TYPE_MANUAL_ADJUSTMENT,
@@ -164,6 +165,26 @@ class ParticipantCompanyStateFilter(admin.SimpleListFilter):
             return queryset.filter(company__in=company_values_with_team)
         if self.value() == "without_primary":
             return queryset.exclude(company="").exclude(company__in=company_values_with_primary)
+        return queryset
+
+
+class BonusLedgerExpirationStateFilter(admin.SimpleListFilter):
+    title = "Контроль сгорания"
+    parameter_name = "bonus_expiration_state"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("warning", "Скоро сгорят"),
+            ("expired", "Уже просрочены"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "warning":
+            warning_entry_ids = [item.entry.id for item in get_upcoming_expiration_warning_preview()]
+            return queryset.filter(id__in=warning_entry_ids)
+        if self.value() == "expired":
+            expired_entry_ids = [item.entry.id for item in get_expiring_bonus_preview()]
+            return queryset.filter(id__in=expired_entry_ids)
         return queryset
 
 
@@ -678,7 +699,7 @@ class BonusLedgerEntryAdmin(AdminMemoMixin, admin.ModelAdmin):
         "created_at",
     )
     search_fields = ("participant__full_name", "reason", "lead__client_name")
-    list_filter = ("entry_type", "created_at")
+    list_filter = ("entry_type", "created_at", BonusLedgerExpirationStateFilter)
     autocomplete_fields = ("participant", "lead")
     list_select_related = ("participant", "lead")
     list_per_page = 25

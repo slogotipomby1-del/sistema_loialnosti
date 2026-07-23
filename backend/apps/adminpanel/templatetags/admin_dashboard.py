@@ -52,13 +52,13 @@ def admin_dashboard_cards():
             "title": "Скоро сгорят",
             "count": upcoming_expiration_count,
             "hint": "Бонусы, по которым скоро нужно отправлять предупреждение участнику.",
-            "url": reverse("admin:bonuses_bonusledgerentry_changelist"),
+            "url": f"{reverse('admin:bonuses_bonusledgerentry_changelist')}?bonus_expiration_state=warning",
         },
         {
             "title": "Уже просрочены",
             "count": expired_bonus_count,
             "hint": "Бонусы с истёкшим сроком, которые готовы к dry-run или ручной проверке.",
-            "url": reverse("admin:bonuses_bonusledgerentry_changelist"),
+            "url": f"{reverse('admin:bonuses_bonusledgerentry_changelist')}?bonus_expiration_state=expired",
         },
         {
             "title": "Спорные случаи",
@@ -96,7 +96,7 @@ def admin_dashboard_priority_items():
         {
             "title": "Сгорание бонусов",
             "text": "Проверьте, не появились ли бонусы, по которым нужно отправить предупреждение или запустить dry-run.",
-            "url": reverse("admin:bonuses_bonusledgerentry_changelist"),
+            "url": f"{reverse('admin:bonuses_bonusledgerentry_changelist')}?bonus_expiration_state=warning",
         },
     )
 
@@ -114,7 +114,7 @@ def admin_dashboard_quick_links():
         },
         {
             "title": "Открыть операции по бонусам",
-            "url": reverse("admin:bonuses_bonusledgerentry_changelist"),
+            "url": f"{reverse('admin:bonuses_bonusledgerentry_changelist')}?bonus_expiration_state=warning",
         },
         {
             "title": "Открыть участников",
