@@ -55,6 +55,49 @@ def test_referral_lead_change_page_shows_client_card_and_memo(client, admin_user
 
 
 @pytest.mark.django_db
+def test_referral_lead_change_page_shows_operational_context(client, admin_user, sample_participant):
+    link = ReferralLink.objects.create(code="ref-context", participant=sample_participant)
+    lead = ReferralLead.objects.create(
+        referral_link=link,
+        client_company="ООО Контекст",
+        client_name="Иван Иванов",
+        client_phone="+375299111222",
+        product_interest="Рюкзаки",
+    )
+    ReferralLead.objects.create(
+        referral_link=None,
+        client_company="ООО Контекст",
+        client_name="Мария",
+        client_phone="+375299111333",
+    )
+    BonusLedgerEntry.objects.create(
+        participant=sample_participant,
+        amount="120.00",
+        reason="Начисление за заказ",
+    )
+    BonusSpendRequest.objects.create(
+        participant=sample_participant,
+        amount="40.00",
+        comment="Доставка",
+        status="pending",
+    )
+
+    client.force_login(admin_user)
+    response = client.get(reverse("admin:referrals_referrallead_change", args=[lead.pk]))
+
+    assert response.status_code == 200
+    content = response.content.decode("utf-8")
+    assert 'data-testid="admin-history-card"' in content
+    assert "Операционный контекст заявки" in content
+    assert "Баланс пригласившего" in content
+    assert "120.00" in content
+    assert "Последние списания" in content
+    assert "Доставка" in content
+    assert "Близкие заявки по компании" in content
+    assert "Мария" in content
+
+
+@pytest.mark.django_db
 def test_participant_change_page_shows_profile_card(client, admin_user, sample_participant):
     ReferralLink.objects.create(code="ref-profile", participant=sample_participant)
     BonusLedgerEntry.objects.create(

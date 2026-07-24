@@ -507,6 +507,9 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
                 ),
             }
             context["admin_action_links"] = self.build_lead_action_links(obj)
+            context["admin_history_title"] = "Операционный контекст заявки"
+            context["admin_history_intro"] = "Баланс, последние операции и близкие заявки для быстрой проверки."
+            context["admin_history_timeline"] = self.build_lead_operational_context(obj)
         return super().render_change_form(
             request,
             context,
@@ -630,6 +633,64 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
                 }
             )
         return tuple(links)
+
+    def build_lead_operational_context(self, obj: ReferralLead) -> tuple[str, ...]:
+        context_lines = []
+        if obj.referral_link:
+            participant = obj.referral_link.participant
+            context_lines.append(
+                f"Баланс пригласившего: {calculate_participant_balance(participant=participant):.2f} мерч-бонусов."
+            )
+            bonus_entries = BonusLedgerEntry.objects.filter(participant=participant).order_by("-created_at")[:3]
+            if bonus_entries:
+                context_lines.append("Последние бонусные операции:")
+                context_lines.extend(
+                    f"{entry.created_at:%d.%m.%Y} — {get_bonus_entry_type_label(entry.entry_type)}: "
+                    f"{entry.amount:.2f} — {entry.reason}"
+                    for entry in bonus_entries
+                )
+            else:
+                context_lines.append("Последних бонусных операций нет.")
+
+            spend_requests = BonusSpendRequest.objects.filter(participant=participant).order_by("-created_at")[:3]
+            if spend_requests:
+                context_lines.append("Последние списания:")
+                context_lines.extend(
+                    f"{spend_request.created_at:%d.%m.%Y} — "
+                    f"{spend_request.comment or 'без комментария'}: {spend_request.amount:.2f} — "
+                    f"{get_spend_request_status_label(spend_request.status)}"
+                    for spend_request in spend_requests
+                )
+            else:
+                context_lines.append("Последних списаний нет.")
+        else:
+            context_lines.append("Пригласивший участник не указан.")
+
+        phone_leads = ReferralLead.objects.none()
+        if obj.client_phone:
+            phone_leads = ReferralLead.objects.filter(client_phone=obj.client_phone).exclude(pk=obj.pk).order_by("-created_at")[:3]
+        if phone_leads:
+            context_lines.append("Близкие заявки по телефону:")
+            context_lines.extend(self.format_related_lead_line(lead) for lead in phone_leads)
+        else:
+            context_lines.append("Близких заявок по телефону нет.")
+
+        company_leads = ReferralLead.objects.none()
+        if obj.client_company:
+            company_leads = ReferralLead.objects.filter(client_company=obj.client_company).exclude(pk=obj.pk).order_by("-created_at")[:3]
+        if company_leads:
+            context_lines.append("Близкие заявки по компании:")
+            context_lines.extend(self.format_related_lead_line(lead) for lead in company_leads)
+        else:
+            context_lines.append("Близких заявок по компании нет.")
+
+        return tuple(context_lines)
+
+    def format_related_lead_line(self, lead: ReferralLead) -> str:
+        return (
+            f"{lead.created_at:%d.%m.%Y} — {lead.client_name or 'Клиент не указан'} — "
+            f"{lead.client_company or 'Компания не указана'} — {get_lead_status_label(lead.status)}"
+        )
 
     @admin.action(description="Перевести в статус «В работе»")
     def mark_as_in_progress(self, request, queryset):
