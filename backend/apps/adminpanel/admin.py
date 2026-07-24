@@ -376,6 +376,11 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
                 reverse("admin:users_participant_change", args=[obj.pk]),
             ),
             format_html(
+                '<a href="{}?client_phone={}">Заявки</a>',
+                reverse("admin:referrals_referrallead_changelist"),
+                obj.phone,
+            ),
+            format_html(
                 '<a href="{}?q={}">Списания</a>',
                 reverse("admin:bonuses_bonusspendrequest_changelist"),
                 obj.phone,
@@ -552,7 +557,11 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
     def quick_actions(self, obj: ReferralLead) -> str:
         links = [
             format_html(
-                '<a href="{}?q={}" style="margin-right:8px; white-space:nowrap;">Телефон</a>',
+                '<a href="{}">Открыть</a>',
+                reverse("admin:referrals_referrallead_change", args=[obj.pk]),
+            ),
+            format_html(
+                '<a href="{}?q={}" style="white-space:nowrap;">Телефон</a>',
                 reverse("admin:referrals_referrallead_changelist"),
                 obj.client_phone,
             )
@@ -560,9 +569,16 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
         if obj.client_company:
             links.append(
                 format_html(
-                    '<a href="{}?q={}" style="margin-right:8px; white-space:nowrap;">Компания</a>',
+                    '<a href="{}?q={}" style="white-space:nowrap;">Компания</a>',
                     reverse("admin:referrals_referrallead_changelist"),
                     obj.client_company,
+                )
+            )
+        if obj.client_phone or obj.client_company:
+            links.append(
+                format_html(
+                    '<a href="{}?duplicate_state=yes" style="white-space:nowrap;">Дубли</a>',
+                    reverse("admin:referrals_referrallead_changelist"),
                 )
             )
         if obj.referral_link:
@@ -572,7 +588,7 @@ class ReferralLeadAdmin(AdminMemoMixin, admin.ModelAdmin):
                     reverse("admin:users_participant_change", args=[obj.referral_link.participant.pk]),
                 )
             )
-        return format_html_join(" ", "{}", ((link,) for link in links))
+        return format_html_join(" ", "{} ", ((link,) for link in links))
 
     def phone_duplicates_count(self, obj: ReferralLead) -> int:
         return ReferralLead.objects.filter(client_phone=obj.client_phone).exclude(pk=obj.pk).count()
@@ -783,6 +799,21 @@ class BonusLedgerEntryAdmin(AdminMemoMixin, admin.ModelAdmin):
                     reverse("admin:referrals_referrallead_change", args=[obj.lead_id]),
                 )
             )
+        if obj.participant.company:
+            links.append(
+                format_html(
+                    '<a href="{}?q={}">Компания</a>',
+                    reverse("admin:users_participant_changelist"),
+                    obj.participant.company,
+                )
+            )
+        links.append(
+            format_html(
+                '<a href="{}?q={}">Списания</a>',
+                reverse("admin:bonuses_bonusspendrequest_changelist"),
+                obj.participant.phone,
+            )
+        )
         return format_html_join(" ", "{}", ((link,) for link in links))
 
 
@@ -886,11 +917,22 @@ class BonusSpendRequestAdmin(AdminMemoMixin, admin.ModelAdmin):
         participant_url = reverse("admin:users_participant_change", args=[obj.participant_id])
         leads_url = f"{reverse('admin:referrals_referrallead_changelist')}?client_phone={obj.participant.phone}"
         requests_url = f"{reverse('admin:bonuses_bonusspendrequest_changelist')}?q={obj.participant.phone}"
-        return format_html(
-            '<a href="{}">Участник</a><br><a href="{}">Заявки клиента</a><br><a href="{}">Все списания</a>',
-            participant_url,
-            leads_url,
-            requests_url,
+        company_url = (
+            f"{reverse('admin:users_participant_changelist')}?q={obj.participant.company}"
+            if obj.participant.company
+            else None
+        )
+        links = [
+            format_html('<a href="{}">Участник</a>', participant_url),
+            format_html('<a href="{}">Заявки</a>', leads_url),
+            format_html('<a href="{}">Списания</a>', requests_url),
+        ]
+        if company_url:
+            links.append(format_html('<a href="{}">Компания</a>', company_url))
+        return format_html_join(
+            "<br>",
+            "{}",
+            ((link,) for link in links),
         )
 
     @admin.action(description="Перевести в статус «Подтверждена»")

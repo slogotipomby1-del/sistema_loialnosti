@@ -531,6 +531,7 @@ def test_participant_admin_renders_quick_actions():
     actions_html = admin_instance.quick_actions(participant)
 
     assert "Открыть" in actions_html
+    assert "Заявки" in actions_html
     assert "Списания" in actions_html
     assert "Компания" in actions_html
 
@@ -565,6 +566,8 @@ def test_bonus_ledger_entry_admin_shows_company_client_and_quick_actions():
 
     assert "Участник" in actions_html
     assert "Лид" in actions_html
+    assert "Компания" in actions_html
+    assert "Списания" in actions_html
 
 
 @pytest.mark.django_db
@@ -675,6 +678,32 @@ def test_referral_lead_admin_renders_status_badge_and_quick_actions():
 
     assert admin_instance.status_label(lead) in status_html
     assert "badge" in status_html
+    assert "Открыть" in actions_html
     assert "Телефон" in actions_html
     assert "Компания" in actions_html
+    assert "Дубли" in actions_html
     assert "Участник" in actions_html
+
+
+@pytest.mark.django_db
+def test_bonus_spend_request_admin_renders_extended_quick_actions():
+    participant = Participant.objects.create(
+        telegram_id="tg-admin-spend-links",
+        full_name="Елена",
+        phone="+375299444555",
+        company="ООО Гамма",
+        consent_accepted=True,
+    )
+    request_obj = BonusSpendRequest.objects.create(
+        participant=participant,
+        amount="50.00",
+        comment="Доставка",
+    )
+    admin_instance = site._registry[BonusSpendRequest]
+
+    actions_html = admin_instance.quick_actions(request_obj)
+
+    assert "Участник" in actions_html
+    assert "Заявки" in actions_html
+    assert "Списания" in actions_html
+    assert "Компания" in actions_html
