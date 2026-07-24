@@ -143,6 +143,10 @@ def test_participant_change_page_shows_profile_card(client, admin_user, sample_p
     assert "Согласие" in content
     assert "Участников в компании" in content
     assert "Доступно бонусов" in content
+    assert "Памятка по участнику" in content
+    assert "Перед начислением или списанием проверьте" in content
+    assert "Если в компании несколько участников" in content
+    assert "согласие на обработку персональных данных" in content
     assert "Операционный контекст участника" in content
     assert "Последние заявки по ссылке" in content
     assert "Последние свои заявки" in content
