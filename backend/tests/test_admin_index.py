@@ -103,5 +103,7 @@ def test_admin_index_shows_operational_dashboard_cards(client):
     assert "Сгорание бонусов" in content
     assert "Быстрые переходы" in content
     assert "Открыть операции по бонусам" in content
+    assert "Скачать отчёт для собственника" in content
+    assert "/admin/owner-report.csv" in content
     assert ">2<" in content
     assert content.count(">1<") >= 3

@@ -120,4 +120,8 @@ def admin_dashboard_quick_links():
             "title": "Открыть участников",
             "url": reverse("admin:users_participant_changelist"),
         },
+        {
+            "title": "Скачать отчёт для собственника",
+            "url": "/admin/owner-report.csv",
+        },
     )
