@@ -52,6 +52,10 @@ def test_referral_lead_change_page_shows_client_card_and_memo(client, admin_user
     assert "Компания пригласившего" in content
     assert "Возможные дубли по телефону" in content
     assert "Найти заявки по телефону" in content
+    assert "Чек-лист перед решением" in content
+    assert "от 2000 BYN" in content
+    assert "тендер" in content
+    assert "Комментарий администратора заполнен" in content
 
 
 @pytest.mark.django_db
@@ -153,6 +157,9 @@ def test_bonus_entry_change_page_shows_memo(client, admin_user, sample_participa
     assert 'data-testid="admin-change-memo-card"' in content
     assert "Проверка бонусной операции" in content
     assert "отрицательным" in content
+    assert "Основание начисления" in content
+    assert "Срок сгорания указан" in content
+    assert "причина аннулирования" in content
 
 
 @pytest.mark.django_db
@@ -172,3 +179,6 @@ def test_bonus_spend_request_change_page_shows_memo(client, admin_user, sample_p
     assert 'data-testid="admin-change-memo-card"' in content
     assert "Проверка списания бонусов" in content
     assert "Компания" in content
+    assert "не больше 20% суммы заказа" in content
+    assert "не больше 200 BYN" in content
+    assert "Назначение списания понятно" in content
