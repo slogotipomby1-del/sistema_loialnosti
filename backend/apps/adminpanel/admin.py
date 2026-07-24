@@ -241,17 +241,16 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
 
     list_display = (
         "full_name",
-        "company",
+        "company_badge",
         "company_team_size",
         "position",
-        "is_primary_contact",
+        "contact_role_badge",
         "bonus_balance_badge",
         "invited_leads_count",
         "spend_requests_count",
+        "pending_spend_requests_count",
         "quick_actions",
         "phone",
-        "telegram_id",
-        "consent_accepted",
         "created_at",
     )
     search_fields = ("full_name", "company", "position", "phone", "telegram_id")
@@ -411,6 +410,34 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
             bg,
             prefix,
             amount,
+        )
+
+    @admin.display(description="Компания", ordering="company")
+    def company_badge(self, obj: Participant) -> str:
+        if not obj.company:
+            return format_html(
+                '<span style="display:inline-block;padding:4px 10px;border-radius:999px;'
+                'font-weight:700;color:#92400e;background:#fef3c7;">{}</span>',
+                "Без компании",
+            )
+        return format_html(
+            '<span style="display:inline-block;padding:4px 10px;border-radius:999px;'
+            'font-weight:700;color:#1d4ed8;background:#dbeafe;">{}</span>',
+            obj.company,
+        )
+
+    @admin.display(description="Основной контакт", ordering="is_primary_contact")
+    def contact_role_badge(self, obj: Participant) -> str:
+        if obj.is_primary_contact:
+            return format_html(
+                '<span style="display:inline-block;padding:4px 10px;border-radius:999px;'
+                'font-weight:700;color:#166534;background:#dcfce7;">{}</span>',
+                "Основной контакт",
+            )
+        return format_html(
+            '<span style="display:inline-block;padding:4px 10px;border-radius:999px;'
+            'font-weight:700;color:#5b6470;background:#e5e7eb;">{}</span>',
+            "Основной контакт не назначен",
         )
 
     @admin.display(description="Приглашено")

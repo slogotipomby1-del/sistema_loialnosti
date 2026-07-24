@@ -97,17 +97,16 @@ def test_participant_admin_has_useful_dashboard_columns():
 
     assert admin_instance.list_display == (
         "full_name",
-        "company",
+        "company_badge",
         "company_team_size",
         "position",
-        "is_primary_contact",
+        "contact_role_badge",
         "bonus_balance_badge",
         "invited_leads_count",
         "spend_requests_count",
+        "pending_spend_requests_count",
         "quick_actions",
         "phone",
-        "telegram_id",
-        "consent_accepted",
         "created_at",
     )
     assert admin_instance.ordering == ("-created_at",)
@@ -196,9 +195,12 @@ def test_participant_admin_dashboard_counters_are_calculated():
 
     assert str(admin_instance.bonus_balance(participant)) == "120.00"
     assert "+120.00" in admin_instance.bonus_balance_badge(participant)
+    assert "ООО Тест" in admin_instance.company_badge(participant)
+    assert "Основной контакт не назначен" in admin_instance.contact_role_badge(participant)
     assert admin_instance.company_team_size(participant) == 1
     assert admin_instance.invited_leads_count(participant) == 1
     assert admin_instance.spend_requests_count(participant) == 1
+    assert admin_instance.pending_spend_requests_count(participant) == 1
 
 
 @pytest.mark.django_db
