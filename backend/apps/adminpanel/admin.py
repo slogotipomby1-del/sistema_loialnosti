@@ -264,12 +264,18 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
                     ("Должность", obj.position or "Не указана"),
                     ("Основной контакт", "Да" if obj.is_primary_contact else "Нет"),
                     ("Телефон", obj.phone or "Не указан"),
+                    ("Telegram ID", obj.telegram_id or "Не указан"),
+                    ("Согласие", "Получено" if obj.consent_accepted else "Не получено"),
+                    ("Участников в компании", self.company_team_size(obj)),
                     ("Доступно бонусов", self.bonus_balance(obj)),
                     ("Приглашённых клиентов", self.invited_leads_count(obj)),
                     ("Запросов на списание", self.spend_requests_count(obj)),
+                    ("Списаний на рассмотрении", self.pending_spend_requests_count(obj)),
                 ),
             }
             context["admin_action_links"] = self.build_participant_action_links(obj)
+            context["admin_history_title"] = "Операционный контекст участника"
+            context["admin_history_intro"] = "Баланс, заявки, списания и последние операции по участнику."
             context["admin_history_timeline"] = self.build_participant_history_timeline(obj)
         return super().render_change_form(
             request,
@@ -285,6 +291,18 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
             {
                 "title": "Найти участника по телефону",
                 "url": f"{reverse('admin:users_participant_changelist')}?q={obj.phone}",
+            },
+            {
+                "title": "Открыть заявки участника",
+                "url": f"{reverse('admin:referrals_referrallead_changelist')}?q={obj.phone}",
+            },
+            {
+                "title": "Открыть списания участника",
+                "url": f"{reverse('admin:bonuses_bonusspendrequest_changelist')}?q={obj.phone}",
+            },
+            {
+                "title": "Открыть бонусные операции",
+                "url": f"{reverse('admin:bonuses_bonusledgerentry_changelist')}?q={obj.full_name}",
             },
         ]
         if obj.company:
@@ -303,20 +321,56 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
         return tuple(links)
 
     def build_participant_history_timeline(self, obj: Participant) -> tuple[str, ...]:
-        history_lines = []
-        for entry in BonusLedgerEntry.objects.filter(participant=obj).order_by("-created_at")[:5]:
+        history_lines = [f"Текущий баланс: {self.bonus_balance(obj):.2f} мерч-бонусов."]
+
+        referral_link = getattr(obj, "referral_link", None)
+        if referral_link:
+            invited_leads = (
+                ReferralLead.objects.filter(referral_link=referral_link)
+                .exclude(client_name=obj.full_name, client_phone=obj.phone)
+                .order_by("-created_at")[:3]
+            )
+            if invited_leads:
+                history_lines.append("Последние заявки по ссылке:")
+                for lead in invited_leads:
+                    history_lines.append(
+                        f"{lead.created_at:%d.%m.%Y} — {lead.client_name or 'Клиент без имени'} — "
+                        f"{lead.client_company or 'компания не указана'} — {get_lead_status_label(lead.status)}"
+                    )
+
+        own_leads = (
+            ReferralLead.objects.filter(referral_link__isnull=True, client_phone=obj.phone)
+            .order_by("-created_at")[:3]
+        )
+        if own_leads:
+            history_lines.append("Последние свои заявки:")
+            for lead in own_leads:
+                history_lines.append(
+                    f"{lead.created_at:%d.%m.%Y} — {lead.product_interest or 'продукция не указана'} — "
+                    f"{get_lead_status_label(lead.status)}"
+                )
+
+        bonus_entries = BonusLedgerEntry.objects.filter(participant=obj).order_by("-created_at")[:3]
+        if bonus_entries:
+            history_lines.append("Последние бонусные операции:")
+        for entry in bonus_entries:
             history_lines.append(
                 f"{entry.created_at:%d.%m.%Y} — {get_bonus_entry_type_label(entry.entry_type)}: "
                 f"{entry.amount:.2f} — {entry.reason}"
             )
-        for spend_request in BonusSpendRequest.objects.filter(participant=obj).order_by("-created_at")[:5]:
+
+        spend_requests = BonusSpendRequest.objects.filter(participant=obj).order_by("-created_at")[:3]
+        if spend_requests:
+            history_lines.append("Последние списания:")
+        for spend_request in spend_requests:
             history_lines.append(
                 f"{spend_request.created_at:%d.%m.%Y} — Запрос на списание: "
                 f"{spend_request.amount:.2f} — {spend_request.comment or 'без комментария'} "
                 f"({get_spend_request_status_label(spend_request.status)})"
             )
-        history_lines.sort(reverse=True)
-        return tuple(history_lines[:6]) or ("Пока операций и запросов нет.",)
+        if len(history_lines) == 1:
+            history_lines.append("Последних заявок, списаний и бонусных операций пока нет.")
+        return tuple(history_lines)
 
     @admin.display(description="Бонусы")
     def bonus_balance(self, obj: Participant) -> Decimal:
@@ -367,6 +421,10 @@ class ParticipantAdmin(AdminMemoMixin, admin.ModelAdmin):
     @admin.display(description="Списания")
     def spend_requests_count(self, obj: Participant) -> int:
         return BonusSpendRequest.objects.filter(participant=obj).count()
+
+    @admin.display(description="На рассмотрении")
+    def pending_spend_requests_count(self, obj: Participant) -> int:
+        return BonusSpendRequest.objects.filter(participant=obj, status=SPEND_REQUEST_STATUS_PENDING).count()
 
     @admin.display(description="Быстрые действия")
     def quick_actions(self, obj: Participant) -> str:

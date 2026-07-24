@@ -103,7 +103,21 @@ def test_referral_lead_change_page_shows_operational_context(client, admin_user,
 
 @pytest.mark.django_db
 def test_participant_change_page_shows_profile_card(client, admin_user, sample_participant):
-    ReferralLink.objects.create(code="ref-profile", participant=sample_participant)
+    referral_link = ReferralLink.objects.create(code="ref-profile", participant=sample_participant)
+    ReferralLead.objects.create(
+        referral_link=referral_link,
+        client_company="ООО Клиент",
+        client_name="Мария",
+        client_phone="+375291111112",
+        product_interest="Рюкзаки",
+    )
+    ReferralLead.objects.create(
+        referral_link=None,
+        client_company=sample_participant.company,
+        client_name=sample_participant.full_name,
+        client_phone=sample_participant.phone,
+        product_interest="Своя заявка",
+    )
     BonusLedgerEntry.objects.create(
         participant=sample_participant,
         amount="100.00",
@@ -125,9 +139,18 @@ def test_participant_change_page_shows_profile_card(client, admin_user, sample_p
     assert 'data-testid="admin-action-links-card"' in content
     assert 'data-testid="admin-history-card"' in content
     assert "Карточка участника" in content
+    assert "Telegram ID" in content
+    assert "Согласие" in content
+    assert "Участников в компании" in content
     assert "Доступно бонусов" in content
-    assert "История участника" in content
+    assert "Операционный контекст участника" in content
+    assert "Последние заявки по ссылке" in content
+    assert "Последние свои заявки" in content
+    assert "Мария" in content
+    assert "Своя заявка" in content
     assert "Запрос на списание" in content
+    assert "Открыть списания участника" in content
+    assert "Открыть бонусные операции" in content
 
 
 @pytest.mark.django_db
